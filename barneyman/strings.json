@@ -1,0 +1,22 @@
+{
+  "config": {
+    "title": "* barneyman",
+    "step": {
+      "user": {
+        "title": "Configure barneyman Integration",
+        "description": "Enter the IP address of a 'remote' barneyman device",
+        "data": {
+          "beachhead": "The beachhead or blank for mdns",
+          "auth": "The long lived bearer token"
+        }
+      }
+    },
+    "abort": {
+      "device_timeout": "Timeout connecting to the device.",
+      "device_fail": "Unexpected error creating device.",
+      "already_configured": "Device is already configured",
+      "under_construction": "Still under construction",
+      "nexist": "Unable to communicate with device"
+    }
+  }
+}

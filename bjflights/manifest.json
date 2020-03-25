@@ -1,0 +1,12 @@
+{
+  "domain": "bjflights",
+  "name": "Barney's Light",
+
+  "config_flow": true,
+  "zeroconf": ["_bjfLights._tcp.local.", "_coap._udp.local."],
+
+  "documentation": "https://github.com/home-assistant/example-custom-config/tree/master/custom_components/example_sensor/",
+  "dependencies": [],
+  "codeowners": [],
+  "requirements": []
+}
