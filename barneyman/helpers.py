@@ -125,11 +125,14 @@ class BJFListener:
         # spin up a thread, tell it the udp
         if transport == "tcp":
             self._listenThread = threading.Thread(target=self.tcpListener)
+            _LOGGER.info("BJFListener called with tcp transport")
         elif transport == "udp":
             self._listenThread = threading.Thread(target=self.udpListener)
-        elif transport == "http":
+            _LOGGER.info("BJFListener called with udp transport")
+        elif transport == "rest":
             self._listenThread = None
             self._port = 8123
+            _LOGGER.info("BJFListener called with http transport")
         elif transport is None:            
             self._listenThread = None
             self._port = None
