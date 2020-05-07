@@ -230,23 +230,6 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorDevice):
         _LOGGER.debug("About to set %s state to %s", self.entity_id, self.state)
         self._hass.states.set(self.entity_id, self.state)
 
-    def subscribe(self):
-
-        _LOGGER.debug("Subscribing %s", self.entity_id)
-
-        recipient = {}
-        if self.getPort() is not None:
-            recipient["port"] = self.getPort()
-        recipient["sensor"] = self._ordinal
-        recipient["endpoint"] = "/api/states/" + self.entity_id  #  light.study_light
-        # dev container - "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI4MGZlMTdlYjJlZTQ0OTQ0ODJmY2I2Njc4ZTFmMmE1MyIsImlhdCI6MTU4MzYzNDIzOCwiZXhwIjoxODk4OTk0MjM4fQ.B0UOKz2aK0hjJzPbAzY1dDzsYSaFnZZEBba3FyBHf38"
-        # rpi3b - "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI0YjhkYmU3ZDE0ZGE0MjIyOWFmNjU1NWFiYTY3NTZhZSIsImlhdCI6MTU4MzY0MTE3OCwiZXhwIjoxODk5MDAxMTc4fQ.p7qROsU9p_5iV2LGqaJ_O2FvUTsZsE72XKNZdWmWq34"
-        recipient["auth"] = self.hass.data[DOMAIN][AUTH_TOKEN]
-
-        _LOGGER.debug(recipient)
-
-        # advise the sensor we're listening
-        doPost(self._hostname, "/json/listen", json.dumps(recipient))
 
     @property
     def is_on(self):
@@ -265,7 +248,7 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorDevice):
 
     def update(self):
         # subscribe
-        self.subscribe()
+        self.subscribe("sensor")
 
         # call base
         return RestSensor.update(self)

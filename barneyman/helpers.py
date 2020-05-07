@@ -5,6 +5,7 @@ from homeassistant.components.rest.sensor import RestData
 from datetime import datetime, timedelta
 import threading
 import socket
+import time
 from .barneymanconst import (
     BEACH_HEAD,
     DEVICES_ADDED,
@@ -12,6 +13,7 @@ from .barneymanconst import (
     DEVICES_FOUND,
     DEVICES_FOUND_SENSOR,
     LISTENING_PORT,
+    AUTH_TOKEN
 )
 
 
@@ -122,6 +124,10 @@ class BJFRestData(RestData):
 
 class BJFListener:
     def __init__(self, transport, hass):
+
+        self._lastSubscribed=None
+        self._subscribeTimeoutMinutes=60
+
         # spin up a thread, tell it the udp
         if transport == "tcp":
             self._listenThread = threading.Thread(target=self.tcpListener)
@@ -203,3 +209,28 @@ class BJFListener:
         else:
             _LOGGER.info("async_added_to_hass %s No Transport Thread started", self.entity_id)
 
+    def subscribe(self, deviceType):
+
+        # we do this periodicall, in case the remote device has been rebooted
+        # and forgotten we love them
+        if self._lastSubscribed is None or ((time.time()-self._lastSubscribed)>self._subscribeTimeoutMinutes*60):
+
+            _LOGGER.debug("Subscribing %s", self.entity_id)
+
+            recipient = {}
+            if self.getPort() is not None:
+                recipient["port"] = self.getPort()
+            recipient[deviceType] = self._ordinal
+            recipient["endpoint"] = "/api/states/" + self.entity_id  #  light.study_light
+            recipient["auth"] = self.hass.data[DOMAIN][AUTH_TOKEN]
+
+            _LOGGER.debug(recipient)
+
+            # advise the sensor we're listening
+            doPost(self._hostname, "/json/listen", json.dumps(recipient))
+
+            self._lastSubscribed=time.time()
+
+        else:
+        
+            _LOGGER.debug("subscribe ignored")

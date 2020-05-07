@@ -186,21 +186,6 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, Light):
         _LOGGER.debug("About to set %s state to %s", self.entity_id, self.state)
         self._hass.states.set(self.entity_id, self.state)
 
-    def subscribe(self):
-
-        _LOGGER.debug("Subscribing %s", self.entity_id)
-
-        recipient = {}
-        if self.getPort() is not None:
-            recipient["port"] = self.getPort()
-        recipient["switch"] = self._ordinal
-        recipient["endpoint"] = "/api/states/" + self.entity_id  #  light.study_light
-        recipient["auth"] = self.hass.data[DOMAIN][AUTH_TOKEN]
-
-        _LOGGER.debug(recipient)
-
-        # advise the sensor we're listening
-        doPost(self._hostname, "/json/listen", json.dumps(recipient))
 
     @property
     def unique_id(self):
@@ -254,7 +239,7 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, Light):
         This is the only method that should fetch new data for Home Assistant.
         """
 
-        self.subscribe()
+        self.subscribe("switch")
 
         _LOGGER.info("doing update")
         self.base_update()
