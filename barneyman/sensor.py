@@ -69,12 +69,8 @@ def addBJFsensor(hostname, add_devices, hass):
                 deviceClass = element["type"]
                 potential = None
 
-                # special case
-                if (
-                    element["impl"] == "tcp"
-                    or element["impl"] == "udp"
-                    or element["impl"] == "http"
-                ):
+                # special case - if there's an instant sensor
+                if "impl" in element:
 
                     sensorValue = Template(
                         '{{ value_json["sensorState"]['
@@ -85,6 +81,8 @@ def addBJFsensor(hostname, add_devices, hass):
                     )
 
                     _LOGGER.debug(sensorValue)
+
+                    _LOGGER.info("Potential BJFBinarySensor")
 
                     potential = BJFBinarySensor(
                         hass,
@@ -101,10 +99,14 @@ def addBJFsensor(hostname, add_devices, hass):
                         config,
                     )
 
-                if element["impl"] == "rest":
-                    # type, uom, round
-                    uom = element["uom"]
-                    numDP = element["round"]
+                else:
+                    _LOGGER.info("Potential BJFRestSensor")
+
+                    # uom, round
+
+                    uom = element["uom"] if "uom" in element else None
+                    numDP = element["round"] if "round" in element else "0"
+
 
                     # build the template string
                     sensorValue = Template(
