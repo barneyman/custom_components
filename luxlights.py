@@ -41,16 +41,6 @@ CONFIG_SCHEMA = vol.Schema(
                         vol.Coerce(float), vol.Range(min=0, max=100)
                     ),
                 },
-                vol.Required("minlux_Occupied"): vol.All(
-                    vol.Coerce(float), vol.Range(min=0, max=10)
-                ),
-                vol.Optional("minlux_Vacant"): vol.All(
-                    vol.Coerce(float), vol.Range(min=0, max=10)
-                ),
-                vol.Required("lux_sensor"): cv.string,
-                vol.Required("scene_vacant"): cv.string,
-                vol.Required("scene_occupied"): cv.string,
-                vol.Required("scene_fake"): cv.string,
             }
         )
     },
@@ -75,16 +65,14 @@ def setup(hass, baseConfig):
 
     # the ln(lux) below which we trigger ON
     # occupied, we open the blind
-    _MIN_LUX_VALUE_OCCUPIED = config.get("minlux_Occupied")
+    ## _MIN_LUX_VALUE_OCCUPIED = config.get("minlux_Occupied")
+
     # uoccupied, we don't
-    _MIN_LUX_VALUE = config.get("minlux_Vacant")
+    ## _MIN_LUX_VALUE = config.get("minlux_Vacant")
 
-    _LUX_SENSOR = config.get("lux_sensor")
-
-    _SCENE_VACANT = config.get("scene_vacant")
-    _SCENE_OCCUPIED = config.get("scene_occupied")
-
-    _SCENE_FAKE = config.get("scene_fake")
+    ## _SCENE_VACANT = config.get("scene_vacant")
+    ## _SCENE_OCCUPIED = config.get("scene_occupied")
+    ## _SCENE_FAKE = config.get("scene_fake")
 
     def saveState(data):
         hass.data[DOMAIN] = json.dumps(data)
@@ -103,35 +91,32 @@ def setup(hass, baseConfig):
     # TODO check this function
     def handle_turnoff(call):
 
-        return
-
-        home = int(hass.states.get(_HEADCOUNT_SENSOR).state)
+        home = int(hass.states.get(_HEADCOUNT_BINARY).state)
 
         if home > 0:
             # turn on occupied
             _LOGGER.info("off ignored")
         else:
-            service_data = {"entity_id": _SCENE_VACANT}
+            service_data = {"entity_id": _SCENE_OFF}
             _LOGGER.info("to vacant")
-            lastKnownRunState = "off"
+            lastKnownRunState = {"state": "off", "scene": "unknown"}
+
             hass.services.call("scene", "turn_on", service_data)
             saveState(lastKnownRunState)
             # tell the boss
-            hass.services.call(
-                "hangouts",
-                "send_message",
-                {
-                    "target": [{"id": "UgyKl3VkJ2F2G_ykyb14AaABAagBjd2cDg"}],
-                    "message": [{"text": "Lights OFF at the beach house"}],
-                },
-            )
+            # hass.services.call(
+            #     "hangouts",
+            #     "send_message",
+            #     {
+            #         "target": [{"id": "UgyKl3VkJ2F2G_ykyb14AaABAagBjd2cDg"}],
+            #         "message": [{"text": "Lights OFF at the beach house"}],
+            #     },
+            # )
 
-    # TODO check this function
+    # this gets called from an automation, it's a hard OFF
     def handle_forceoff(call):
 
-        return
-
-        service_data = {"entity_id": _SCENE_VACANT}
+        service_data = {"entity_id": _SCENE_OFF}
         _LOGGER.info("to vacant")
         lastKnownRunState = {"state": "off", "scene": "unknown"}
         hass.services.call("scene", "turn_on", service_data)
@@ -159,15 +144,15 @@ def setup(hass, baseConfig):
         lux = hass.states.get(_LUX_SENSOR)
         hcountBinary = hass.states.get(_HEADCOUNT_BINARY)
         # sensor.lux_sensor
-        _LOGGER.info("Lux sensor %s", str(lux))
-        _LOGGER.info("hcountBinary sensor %s", str(hcountBinary))
+        _LOGGER.debug("Lux sensor %s", str(lux))
+        _LOGGER.debug("hcountBinary sensor %s", str(hcountBinary))
 
         # only run if we're enabled (happens by dusk event in automation) after we're turned off
         # also allows for 'unknown' after a reboot
         lastKnownRunState = loadState()
 
-        _LOGGER.info("lastKnownRunState")
-        _LOGGER.info(lastKnownRunState)
+        _LOGGER.debug("lastKnownRunState")
+        _LOGGER.debug(lastKnownRunState)
 
         if lastKnownRunState["state"] == "off":
             return
@@ -203,8 +188,8 @@ def setup(hass, baseConfig):
             nextStateValue["state"] = "absent"
             meta = _ABSENT
 
-        _LOGGER.info("meta")
-        _LOGGER.info(meta)
+        _LOGGER.debug("meta")
+        _LOGGER.debug(meta)
 
         # check lux
         if luxValue < float(meta["minLux"]):
@@ -212,8 +197,8 @@ def setup(hass, baseConfig):
         else:
             nextStateValue["scene"] = "unlit_scene"
 
-        _LOGGER.info("nextStateValue")
-        _LOGGER.info(nextStateValue)
+        _LOGGER.debug("nextStateValue")
+        _LOGGER.debug(nextStateValue)
 
         # do we need a transition - off gets checked for above
         if lastKnownRunState["state"] != nextStateValue["state"]:
@@ -243,67 +228,6 @@ def setup(hass, baseConfig):
 
         return
 
-        lastKnownRunState["state"]
-
-        try:
-
-            if float(lux.state) > max(_MIN_LUX_VALUE, _MIN_LUX_VALUE_OCCUPIED):
-                # too bright - bail
-                _LOGGER.info("lux too bright for both minima " + lux.state)
-                return
-
-            home = int(hcount.state)
-
-        except Exception as e:
-            _LOGGER.warning("luxlights exception %s", e)
-            return
-
-        # what state do i THINK i'm in?
-        # (if i think i've run, ignore)
-
-        _LOGGER.info("last known state " + lastKnownRunState)
-
-        if home > 0:
-            if lastKnownRunState == "onVacant" or (
-                lastKnownRunState in ["check", "unknown"]
-                and float(lux.state) < _MIN_LUX_VALUE_OCCUPIED
-            ):
-                # turn on occupied
-                _LOGGER.info("to onOccupied")
-                hass.services.call("scene", "turn_on", {"entity_id": _SCENE_OCCUPIED})
-                lastKnownRunState = "onOccupied"
-                # don't scare the humans
-
-        #               service: tts.google_say
-        #               data:
-        #                 message: 'May the Force be with you.'
-        #                hass.services.call('tts','google_say',{"entity_id":  "media_player.beach_home", "message":"it's getting dark!"})
-
-        elif home == 0:
-            if lastKnownRunState == "onOccupied" or (
-                lastKnownRunState in ["check", "unknown"]
-                and float(lux.state) < _MIN_LUX_VALUE
-            ):
-                # someone in, has left
-                hass.services.call("scene", "turn_on", {"entity_id": _SCENE_FAKE})
-                _LOGGER.info("to onVacant")
-                lastKnownRunState = "onVacant"
-
-                # tell the boss
-                hass.services.call(
-                    "hangouts",
-                    "send_message",
-                    {
-                        "target": [{"id": "UgyKl3VkJ2F2G_ykyb14AaABAagBjd2cDg"}],
-                        "message": [{"text": "Lights on at the beach house"}],
-                    },
-                )
-        else:
-            _LOGGER.info("ignored")
-
-        saveState(lastKnownRunState)
-
-        return
 
     async def _async_sensor_changed(entity_id, old_state, new_state):
         """Handle temperature changes."""
