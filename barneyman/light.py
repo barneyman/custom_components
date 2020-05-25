@@ -223,13 +223,13 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, Light):
         # self._light.brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         # self._light.turn_on()
 
-        doQuery(self._hostname, "/button?action=on&port=" + str(self._ordinal), False)
+        doPost(self._hostname, "/button?action=on&port=" + str(self._ordinal))
         self._rest.resetCache()
 
     def turn_off(self, **kwargs):
         """Instruct the light to turn off."""
 
-        doQuery(self._hostname, "/button?action=off&port=" + str(self._ordinal), False)
+        doPost(self._hostname, "/button?action=off&port=" + str(self._ordinal))
         # and reset the cache
         self._rest.resetCache()
 
@@ -348,7 +348,7 @@ class bjfESPRGBLight(bjfESPLight):
                 r=rgb[0], g=rgb[1], b=rgb[2], effect=self._effect
             )
             _LOGGER.info("querying %s", query)
-            doQuery(self._hostname, query, False)
+            doPost(self._hostname, query)
         # else:
         #    self._light.command('on')
 
