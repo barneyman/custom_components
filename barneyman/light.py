@@ -275,6 +275,11 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, Light):
         return jsonData
 
 
+#################################
+### not migrated to barneyman yet
+#################################
+
+
 LIGHT_EFFECT_LIST = ["rainbow", "none"]
 
 

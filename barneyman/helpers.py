@@ -3,6 +3,7 @@ import http.client
 import json
 from homeassistant.components.rest.sensor import RestData
 from datetime import datetime, timedelta
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import threading
 import socket
 import time
@@ -73,12 +74,38 @@ class BJFDeviceInfo:
         return {
             "identifiers": {
                 # Serial numbers are unique identifiers within a specific domain
-                ("mac", self._mac)
+                (CONNECTION_NETWORK_MAC, self._mac)
             },
             "name": self._config["name"],
             "manufacturer": "barneyman",
             "sw_version": self._config["version"],
         }
+
+
+class BJFChildDeviceInfo:
+    def __init__(self, config, parent):
+        self._config = config
+        self._parent=parent.device_info["identifiers"]
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {
+                # Serial numbers are unique identifiers within a specific domain
+                (CONNECTION_NETWORK_MAC, self._mac)
+            },
+            "name": self._config["name"],
+            "manufacturer": "barneyman",
+            "sw_version": self._config["version"],
+            "via_device": self._parent
+        }
+
+
+
+
+
+
+
 
 
 class BJFRestData(RestData):
