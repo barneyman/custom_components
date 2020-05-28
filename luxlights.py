@@ -93,7 +93,7 @@ def setup(hass, baseConfig):
 
         home = int(hass.states.get(_HEADCOUNT_BINARY).state)
 
-        if home > 0:
+        if home=="on":
             # turn on occupied
             _LOGGER.info("off ignored")
         else:
@@ -125,18 +125,10 @@ def setup(hass, baseConfig):
     # TODO check this function
     def handle_enableCheck(call):
 
-        return
-
-        lastKnownRunState = "check"
+        lastKnownRunState = {"state": "check", "scene": "unknown"}
         saveState(lastKnownRunState)
 
     def handle_check():
-        # name = call.data.get(ATTR_NAME, DEFAULT_NAME)
-        # import datetime
-        # hass.states.set('luxlights.lastcheck', datetime.datetime.now().isoformat())
-        # entity_id='light.lamp1'
-        # service_data = {'entity_id':  entity_id}
-        # hass.services.call('light', 'turn_on', service_data)
 
         # this should run every five mins from before sunset to 11pm
         # first, check the lux
