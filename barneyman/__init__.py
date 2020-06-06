@@ -145,9 +145,12 @@ async def async_setup(hass, baseConfig):
                     ].append(host)
                     _LOGGER.debug("Adding %s to %s", host, DEVICES_FOUND_LIGHT)
 
-        hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_ADDED].extend(
-            hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_UNQUALIFIED]
-        )
+                # only add it to found if we could query it, otherwise we'll discovber it again and retry
+                hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_ADDED].append(host)
+
+        # hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_ADDED].extend(
+        #     hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_UNQUALIFIED]
+        #)
 
         hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_UNQUALIFIED] = []
 
