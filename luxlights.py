@@ -91,7 +91,7 @@ def setup(hass, baseConfig):
     # TODO check this function
     def handle_turnoff(call):
 
-        home = int(hass.states.get(_HEADCOUNT_BINARY).state)
+        home = (hass.states.get(_HEADCOUNT_BINARY).state)
 
         if home=="on":
             # turn on occupied
