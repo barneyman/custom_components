@@ -99,7 +99,7 @@ def setup(hass, baseConfig):
         else:
             service_data = {"entity_id": _SCENE_OFF}
             _LOGGER.info("to vacant")
-            lastKnownRunState = {"state": "off", "scene": "unknown"}
+            lastKnownRunState = {"state": "off", "scene": _SCENE_OFF}
 
             hass.services.call("scene", "turn_on", service_data)
             saveState(lastKnownRunState)
@@ -117,8 +117,8 @@ def setup(hass, baseConfig):
     def handle_forceoff(call):
 
         service_data = {"entity_id": _SCENE_OFF}
-        _LOGGER.info("to vacant")
-        lastKnownRunState = {"state": "off", "scene": "unknown"}
+        _LOGGER.info("to vacant FORCED")
+        lastKnownRunState = {"state": "off", "scene": _SCENE_OFF}
         hass.services.call("scene", "turn_on", service_data)
         saveState(lastKnownRunState)
 
