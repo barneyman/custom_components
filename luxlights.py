@@ -27,6 +27,9 @@ CONFIG_SCHEMA = vol.Schema(
                 vol.Required("presence_binary"): cv.string,  # sensor.headcount_sensor
                 vol.Required("lux_sensor"): cv.string,
                 vol.Required("off_scene"): cv.string,
+                vol.Optional("jitter", default=10):vol.All(
+                        vol.Coerce(float), vol.Range(min=0, max=20)
+                    ),
                 "absent": {
                     vol.Optional("unlit_scene"): cv.string,
                     vol.Optional("lit_scene"): cv.string,
@@ -60,6 +63,8 @@ def setup(hass, baseConfig):
 
     _ABSENT = config["absent"]
     _PRESENT = config["present"]
+
+    _JITTER=config.get("jitter")
 
     _SCENE_OFF = config.get("off_scene")
 
@@ -122,7 +127,7 @@ def setup(hass, baseConfig):
         hass.services.call("scene", "turn_on", service_data)
         saveState(lastKnownRunState)
 
-    # TODO check this function
+    # reset my state, normally done sunset-hrs
     def handle_enableCheck(call):
 
         lastKnownRunState = {"state": "check", "scene": "unknown"}
@@ -183,8 +188,16 @@ def setup(hass, baseConfig):
         _LOGGER.debug("meta")
         _LOGGER.debug(meta)
 
+        # work out minlux
+        minLuxValue = meta["minLux"]
+        # to stop us turning on and off at the threshold 
+        if lastKnownRunState["scene"]=="lit_scene":
+            minLuxValue=minLuxValue+_JITTER
+            _LOGGER.debug("applying jitter {} {} {}".format(meta["minLux"],_JITTER,minLuxValue))
+
+
         # check lux
-        if luxValue < float(meta["minLux"]):
+        if luxValue < minLuxValue:
             nextStateValue["scene"] = "lit_scene"
         else:
             nextStateValue["scene"] = "unlit_scene"
