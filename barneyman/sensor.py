@@ -63,13 +63,18 @@ def addBJFsensor(hostname, add_devices, hass):
         url = "http://" + config["ip"] + "/json/state"
         rest = BJFRestData("GET", url, None, None, None)
 
+        friendlyName = (
+            config["friendlyName"] if "friendlyName" in config else config["name"]
+        )
+
+
         # add a bunch of rest sensors
         for eachSensor in config["sensorConfig"]:
             for element in eachSensor["elements"]:
                 deviceClass = element["type"]
                 potential = None
 
-                # special case - if there's an instant sensor
+                # special case - if there's an instant sensor - PIR generally
                 if "impl" in element:
 
                     sensorValue = Template(
@@ -90,7 +95,8 @@ def addBJFsensor(hostname, add_devices, hass):
                         mac,
                         hostname,
                         rest,
-                        eachSensor["name"] + "_" + deviceClass,
+                        # entity name
+                        friendlyName+" "+eachSensor["name"] + " " + deviceClass,
                         deviceClass,
                         None,
                         sensorValue,
@@ -127,7 +133,8 @@ def addBJFsensor(hostname, add_devices, hass):
                         mac,
                         hostname,
                         rest,
-                        eachSensor["name"] + "_" + deviceClass,
+                        # entity name
+                        friendlyName+" "+eachSensor["name"] + " " + deviceClass,
                         deviceClass,
                         uom,
                         sensorValue,
