@@ -124,6 +124,7 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
         self._name=name
         self._frame_interval=2
         self._camUrl=camUrl
+        self._last_image=None
 
         self._supported_features = 0
 
