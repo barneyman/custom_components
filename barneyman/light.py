@@ -177,7 +177,7 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, Light):
         self._hass = hass
 
         # and get my state
-        self.update()
+        self.base_update()
 
     #        self._brightness = None
 
