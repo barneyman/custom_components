@@ -13,6 +13,7 @@ from .barneymanconst import (
     DEVICES_FOUND_UNQUALIFIED,
     DEVICES_FOUND_LIGHT,
     DEVICES_FOUND_SENSOR,
+    DEVICES_FOUND_CAMERA,
     LISTENING_PORT,
     AUTH_TOKEN,
 )
@@ -79,6 +80,7 @@ async def async_setup(hass, baseConfig):
                 DEVICES_FOUND_UNQUALIFIED: [],
                 DEVICES_FOUND_LIGHT: [],
                 DEVICES_FOUND_SENSOR: [],
+                DEVICES_FOUND_CAMERA: [],
             },
         },
     }
@@ -145,6 +147,13 @@ async def async_setup(hass, baseConfig):
                     ].append(host)
                     _LOGGER.debug("Adding %s to %s", host, DEVICES_FOUND_LIGHT)
 
+                if "cameraConfig" in config:
+                    hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][
+                        DEVICES_FOUND_CAMERA
+                    ].append(host)
+                    _LOGGER.debug("Adding %s to %s", host, DEVICES_FOUND_CAMERA)
+
+
                 # only add it to found if we could query it, otherwise we'll discovber it again and retry
                 hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_ADDED].append(host)
 
@@ -182,7 +191,7 @@ async def async_setup_entry(hass, entry):
             )
 
     # then forward this to all the component
-    for component in ["light", "sensor"]:
+    for component in [DEVICES_FOUND_LIGHT, DEVICES_FOUND_SENSOR, DEVICES_FOUND_CAMERA]:
         if component not in entryTypes:
             _LOGGER.info("barneyman async_setup_entry forwarding to %s", component)
             hass.async_create_task(
