@@ -84,8 +84,8 @@ def addBJFcamera(hostname, add_devices, hass):
                 hass,
                 mac,
                 hostname,
-                # entity name
-                friendlyName+" "+eachCamera["name"] + " " + str(camNumber),
+                # entity name - +1 for the cosmetic name - that's confusing!
+                friendlyName+" "+eachCamera["name"] + " " + str(camNumber+1),
                 url+str(camNumber),
                 camNumber,
                 config,
@@ -122,7 +122,7 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
         self._hostname = hostname
         self._mac = mac
         self._name=name
-        self._frame_interval=2
+        self._frame_interval=5
         self._camUrl=camUrl
         self._last_image=None
 
@@ -132,6 +132,10 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
     def unique_id(self):
         """Return unique ID for sensor."""
         return self._unique_id
+
+    @property
+    def name(self):
+        return self._name
 
 
     @property
