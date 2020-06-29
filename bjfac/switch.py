@@ -7,7 +7,7 @@ import logging
 import time
 
 # Import the device class from the component that you want to support
-from homeassistant.components.switch import SwitchDevice
+from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import DEVICE_DEFAULT_NAME
 
 #import homeassistant.helpers.config_validation as cv
@@ -38,7 +38,7 @@ def setup_platform(hass, config, add_devices_callback, discovery_info=None):
 
 
 
-class irSwitch(SwitchDevice):
+class irSwitch(SwitchEntity):
     """Representation of a demo switch."""
 
     def __init__(self, name, state, icon, assumed):
@@ -105,7 +105,7 @@ class irSwitch(SwitchDevice):
         # ONLY because we are Not Poll
         self.schedule_update_ha_state()
 
-class heaterSwitch(irSwitch):
+class heaterSwitch(SwitchEntity):
 
     def __init__(self, name, state, icon, assumed):
         irSwitch.__init__(self,name,state,icon,assumed)
@@ -122,7 +122,7 @@ class heaterSwitch(irSwitch):
         self.schedule_update_ha_state()
 
 
-class airconSwitch(irSwitch):
+class airconSwitch(SwitchEntity):
 
     def __init__(self, name, state, icon, assumed):
         irSwitch.__init__(self,name,state,icon,assumed)

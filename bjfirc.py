@@ -5,7 +5,7 @@ import json
 import http.client
 
 # Import the device class from the component that you want to support
-from homeassistant.components.light import PLATFORM_SCHEMA
+#from homeassistant.components.light import PLATFORM_SCHEMA
 from homeassistant.const import CONF_HOST, CONF_PORT
 import homeassistant.helpers.config_validation as cv
 

@@ -5,7 +5,7 @@ For more details about this platform, please refer to the documentation
 https://home-assistant.io/components/demo/
 """
 from homeassistant.components.climate import (
-    ClimateDevice, ATTR_TARGET_TEMP_HIGH, ATTR_TARGET_TEMP_LOW,
+    ClimateEntity, ATTR_TARGET_TEMP_HIGH, ATTR_TARGET_TEMP_LOW,
     SUPPORT_TARGET_TEMPERATURE, SUPPORT_TARGET_HUMIDITY,
     SUPPORT_FAN_MODE,
     SUPPORT_AUX_HEAT, SUPPORT_SWING_MODE,
@@ -38,7 +38,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     ])
 
 
-class LGirClimate(ClimateDevice):
+class LGirClimate(ClimateEntity):
     """Representation of a demo climate device."""
 
     def __init__(self, hass, name, target_temperature, unit_of_measurement,
