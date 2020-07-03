@@ -16,6 +16,7 @@ from .barneymanconst import (
     AUTH_TOKEN,
 )
 from .helpers import doQuery, doPost, BJFDeviceInfo, BJFRestData, BJFListener
+from typing import Any, Dict, List, Optional
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,6 +26,10 @@ DOMAIN = "barneyman"
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("SENSOR async_setup_entry: %s", config_entry)
+
+    # first off, add my own barneyman sensor that lets me query how this platform is working
+    _LOGGER.debug("adding barneyman sensor:")
+    async_add_devices([barneymanSensor(hass)])
 
     # simply so i have a ref to async_add_devices
     def scanForSensors(self):
@@ -47,6 +52,47 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     async_track_time_interval(hass, scanForSensors, timedelta(seconds=30))
 
     return True
+
+
+
+
+
+class barneymanSensor(Entity):    
+
+    def __init__(self,hass):
+        self._unique_id = "barneyman_admin"
+        self._hass=hass
+
+    @property
+    def unique_id(self):
+        """Return unique ID for sensor."""
+        return self._unique_id
+
+    @property
+    def name(self):
+        return "barneyman monitor"
+
+    @property
+    def state(self):
+        """Return the state of the binary sensor."""
+        return STATE_ON
+
+    def update(self):
+        pass
+
+    @property
+    def state_attributes(self) -> Dict[str, Any]:
+
+        # how many are there?
+        listFound=self._hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_ADDED]
+
+
+        data = {
+            "deviceCount": len(listFound),
+            "devices": listFound
+        }
+
+        return data
 
 
 def addBJFsensor(hostname, add_devices, hass):

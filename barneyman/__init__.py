@@ -2,6 +2,7 @@
 
 import logging
 import voluptuous as vol
+import json
 from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers.event import async_track_time_interval
 from datetime import datetime, timedelta
@@ -165,9 +166,33 @@ async def async_setup(hass, baseConfig):
 
         _LOGGER.debug(hass.data[DOMAIN][DISCOVERY_ROOT])
 
+    # _LOGGER.debug("getDeviceList defined")
+    # def getDeviceList(call):
+    #     listOfDevices=[]
+    #     for each in hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_ADDED]:
+    #         listOfDevices.append(each)
+    #     ret=json.dumps(listOfDevices)
+    #     _LOGGER.debug("getDeviceList")
+    #     _LOGGER.debug(ret)
+    #     return ret
+
+
+    # # register a service
+    # _LOGGER.debug("about to register getDeviceList")
+    # try:
+    #     hass.services.async_register(DOMAIN,"getDeviceList", getDeviceList)
+        
+
+    # except Exception as e:
+    #     _LOGGER.error(e)
+ 
+
+    _LOGGER.debug("defined")
+
+
     # look for our devices
     searchForDevices(0)
-    async_track_time_interval(hass, searchForDevices, timedelta(seconds=20))
+    async_track_time_interval(hass, searchForDevices, timedelta(seconds=120))
 
     return True
 
