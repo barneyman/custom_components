@@ -3,7 +3,7 @@ import json
 import voluptuous as vol
 
 # Import the device class from the component that you want to support
-from homeassistant.components.light import ATTR_BRIGHTNESS, Light, PLATFORM_SCHEMA
+
 from datetime import datetime, timedelta
 from homeassistant.const import CONF_FILE_PATH
 import homeassistant.helpers.config_validation as cv
@@ -25,12 +25,13 @@ from homeassistant.components.light import (
     ATTR_EFFECT,
     ATTR_HS_COLOR,
     ATTR_WHITE_VALUE,
+    PLATFORM_SCHEMA,
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR_TEMP,
     SUPPORT_EFFECT,
     SUPPORT_COLOR,
     SUPPORT_WHITE_VALUE,
-    Light,
+    LightEntity,
 )
 
 # Home Assistant depends on 3rd party packages for API specific code.
@@ -107,7 +108,9 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     # Search for devices
     # removing this causes devices o not be discovered? specuatoive change, enabkibg
+    #await hass.async_add_executor_job(scanForLights(0))
     scanForLights(0)
+
 
     # then schedule this again for 40 seconds.
     async_track_time_interval(hass, scanForLights, timedelta(seconds=30))
@@ -158,7 +161,7 @@ def addBJFlight(hostname, add_devices, hass):
         _LOGGER.error("Failed to query %s", hostname)
 
 
-class bjfESPLight(BJFDeviceInfo, BJFListener, Light):
+class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):
     def __init__(self, hostname, mac, config, ordinal, rest, transport, hass):
         BJFDeviceInfo.__init__(self, config)
         BJFListener.__init__(self, transport, hass)

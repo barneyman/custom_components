@@ -18,6 +18,10 @@ from .barneymanconst import (
 from .helpers import doQuery, doPost, BJFDeviceInfo, BJFRestData, BJFListener
 from typing import Any, Dict, List, Optional
 
+from homeassistant.const import STATE_OFF, STATE_ON
+from homeassistant.components.binary_sensor import BinarySensorEntity
+
+
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "barneyman"
@@ -46,6 +50,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     # Search for devices
     # removing this causes devices o not be discovered? specuatoive change, enabkibg
+    # await hass.async_add_executor_job(scanForSensors(0))
     scanForSensors(0)
 
     # then schedule this again for X seconds.
@@ -229,13 +234,9 @@ class BJFRestSensor(BJFDeviceInfo, RestSensor):
         return self._unique_id
 
 
-from homeassistant.const import STATE_OFF, STATE_ON
-
-
-from homeassistant.components.binary_sensor import BinarySensorDevice
 
 # inherit from a BinarySensorDevice so the icons work right
-class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorDevice):
+class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
     def __init__(
         self,
         hass,

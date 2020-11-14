@@ -191,7 +191,9 @@ async def async_setup(hass, baseConfig):
 
 
     # look for our devices
+    # await hass.async_add_executor_job()
     searchForDevices(0)
+    
     async_track_time_interval(hass, searchForDevices, timedelta(seconds=120))
 
     return True
