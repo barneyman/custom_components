@@ -137,8 +137,12 @@ class BJFRestData(RestData):
     def updateRestData(self):
         # changed to async, update deprecated
         # RestData.update(self)
-        asyncio.run_coroutine_threadsafe(RestData.async_update(self), self._hass.loop).result()
-        self._lastUpdate = datetime.now()
+        try:
+            asyncio.run_coroutine_threadsafe(RestData.async_update(self), self._hass.loop).result(5)
+            self._lastUpdate = datetime.now()
+        except Exception as e:
+            _LOGGER.warning("exception %s", e)
+
 
     async def async_updateRestData(self):
         # changed to async, update deprecated
