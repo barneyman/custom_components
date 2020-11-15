@@ -51,6 +51,11 @@ class irSwitch(SwitchEntity):
         #self.hass=hass
 
     @property
+    def is_on(self) -> bool:
+        """Return True if entity is on."""
+        return self._state
+        
+    @property
     def should_poll(self):
         """No polling needed for a demo switch."""
         return False
@@ -122,7 +127,7 @@ class heaterSwitch(SwitchEntity):
         self.schedule_update_ha_state()
 
 
-class airconSwitch(SwitchEntity):
+class airconSwitch(irSwitch):
 
     def __init__(self, name, state, icon, assumed):
         irSwitch.__init__(self,name,state,icon,assumed)

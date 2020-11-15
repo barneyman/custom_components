@@ -17,6 +17,8 @@ from .barneymanconst import (
     AUTH_TOKEN
 )
 
+import asyncio
+
 
 _LOGGER = logging.getLogger(__name__)
 DOMAIN = "barneyman"
@@ -111,6 +113,7 @@ class BJFChildDeviceInfo:
 class BJFRestData(RestData):
     def __init__(
         self,
+        hass,
         method,
         resource,
         auth,
@@ -126,16 +129,30 @@ class BJFRestData(RestData):
 
         self._lastUpdate = None
         self._cacheTimeout = cacheTimeout
+        self._hass = hass
 
     def resetCache(self):
         self._lastUpdate = None
 
-    def update(self):
+    def updateRestData(self):
+        # changed to async, update deprecated
+        # RestData.update(self)
+        asyncio.run_coroutine_threadsafe(RestData.async_update(self), self._hass.loop).result()
+        self._lastUpdate = datetime.now()
 
+    async def async_updateRestData(self):
+        # changed to async, update deprecated
+        # RestData.update(self)
+        await RestData.async_update(self)
+        self._lastUpdate = datetime.now()
+
+
+    async def async_update(self):
         if self._lastUpdate is None or self.data is None:
             _LOGGER.debug("BJFRestData - first update")
-            RestData.update(self)
-            self._lastUpdate = datetime.now()
+            # changed to async, update deprecated
+            await self.async_updateRestData()
+
         else:
             now = datetime.now()
             if (now - self._lastUpdate).total_seconds() > self._cacheTimeout:
@@ -143,8 +160,25 @@ class BJFRestData(RestData):
                     "BJFRestData - data is stale %d secs",
                     (now - self._lastUpdate).total_seconds(),
                 )
-                RestData.update(self)
-                self._lastUpdate = now
+                await self.async_updateRestData()
+            else:
+                _LOGGER.debug("BJFRestData - cache hit")
+
+    def update(self):
+
+        if self._lastUpdate is None or self.data is None:
+            _LOGGER.debug("BJFRestData - first update")
+            # changed to async, update deprecated
+            self.updateRestData()
+
+        else:
+            now = datetime.now()
+            if (now - self._lastUpdate).total_seconds() > self._cacheTimeout:
+                _LOGGER.debug(
+                    "BJFRestData - data is stale %d secs",
+                    (now - self._lastUpdate).total_seconds(),
+                )
+                self.updateRestData()
             else:
                 _LOGGER.debug("BJFRestData - cache hit")
 

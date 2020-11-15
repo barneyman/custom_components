@@ -112,7 +112,7 @@ def addBJFsensor(hostname, add_devices, hass):
 
         # built early, in case it's shared
         url = "http://" + config["ip"] + "/json/state"
-        rest = BJFRestData("GET", url, None, None, None)
+        rest = BJFRestData(hass,"GET", url, None, None, None)
 
         friendlyName = (
             config["friendlyName"] if "friendlyName" in config else config["name"]
