@@ -236,9 +236,9 @@ class luxLightInstance:
             # turn on occupied
             _LOGGER.info("off ignored")
         else:
-            service_data = {"entity_id": _SCENE_OFF}
+            service_data = {"entity_id": self._offScene}
             _LOGGER.info("{} to vacant".format(self._name))
-            lastKnownRunState = {"state": "off", "scene": _SCENE_OFF}
+            lastKnownRunState = {"state": "off", "scene": self._offScene}
 
             self._hass.services.call("scene", "turn_on", service_data)
             self.saveState(lastKnownRunState)
@@ -255,9 +255,9 @@ class luxLightInstance:
 
     def hardOff(self):
 
-        service_data = {"entity_id": _SCENE_OFF}
+        service_data = {"entity_id": self._offScene}
         _LOGGER.info("{} to vacant FORCED ".format(self._name))
-        lastKnownRunState = {"state": "off", "scene": _SCENE_OFF}
+        lastKnownRunState = {"state": "off", "scene": self._offScene}
         self._hass.services.call("scene", "turn_on", service_data)
         self.saveState(lastKnownRunState)
 
