@@ -1,6 +1,6 @@
 {
   "domain": "barneyman",
-  "name": "Barney's Home Automation Devices",
+  "name": "barneyman's Home Automation Devices",
 
   "config_flow": true,
   "zeroconf": ["_barneyman._tcp.local.", "_coap._udp.local."],
