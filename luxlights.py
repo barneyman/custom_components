@@ -14,7 +14,10 @@ import json
 
 # mypersistfile="./luxlights.json"
 
-from homeassistant.helpers.event import async_track_state_change
+from homeassistant.helpers.event import async_track_state_change, async_track_point_in_time, track_point_in_time
+from homeassistant.util.dt import as_local, utcnow
+import datetime
+
 
 import homeassistant.helpers.config_validation as cv
 
@@ -46,6 +49,9 @@ import homeassistant.helpers.config_validation as cv
 #         }
 #     )
 
+offSchema=vol.Schema({
+    vol.Required("at"): cv.time
+})
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -55,6 +61,10 @@ CONFIG_SCHEMA = vol.Schema(
                     vol.Required("presence_binary"): cv.string,  
                     vol.Required("lux_sensor"): cv.string,
                     vol.Required("off_scene"): cv.string,
+                    "softOff":offSchema,
+                    "hardOff":offSchema,
+                    "reset":offSchema,
+
                     vol.Optional("jitter", default=10):vol.All(
                             vol.Coerce(float), vol.Range(min=0, max=20)
                         ),
@@ -97,6 +107,7 @@ class luxLightInstance:
         self._absentDetail=config["absent"]
         self._presentDetail=config["present"]
 
+
         # prime the storing
         hass.data[DOMAIN] = { name: {} }
 
@@ -112,9 +123,48 @@ class luxLightInstance:
 
             result = await hass.async_add_executor_job(self.handleSensoryCheck)
 
+        self.scheduleOffTimes()            
+        self.scheduleReset()
 
         async_track_state_change(hass, self._headcountSensor, _async_sensor_changed)
         async_track_state_change(hass, self._luxSensor, _async_sensor_changed)
+
+
+    def timeStringToDateTime(self, stringTime):
+        # get now from homeassistant.util.dt import as_local, utcnow
+        now=utcnow()
+        # turn it local
+        now=as_local(now)
+        # fix the time component
+        then=now.replace(hour=stringTime.hour, minute=stringTime.minute, second=stringTime.second, microsecond=0)
+        _LOGGER.info("now {} then {}".format(now,then))
+        # check for 'gone'
+        if then<now:
+            _LOGGER.info("missed it - adding a day")
+            # add a day
+            then+=datetime.timedelta(days=1)
+        return then
+
+    def scheduleReset(self):
+
+        # get my hard/soft off times
+        self._reset=self.timeStringToDateTime(self._config["reset"]["at"])
+
+        _LOGGER.info("reset time is {}".format(self._reset))
+
+        track_point_in_time(self._hass, self.resetCheck, self._reset)
+
+    def scheduleOffTimes(self):
+
+        # get my hard/soft off times
+        self._softOff=self.timeStringToDateTime(self._config["softOff"]["at"])
+        self._hardOff=self.timeStringToDateTime(self._config["hardOff"]["at"])
+
+        _LOGGER.info("Off times are {} & {}".format(self._softOff, self._hardOff))
+
+        track_point_in_time(self._hass, self.softOff, self._softOff)
+        track_point_in_time(self._hass, self.hardOff, self._hardOff)
+
 
 
     def handleSensoryCheck(self):
@@ -228,7 +278,7 @@ class luxLightInstance:
         return json.loads(self._hass.data[DOMAIN][self._name])
 
     # only turn off if no-one present
-    def softOff(self):
+    def softOff(self, call):
 
         home = (self._hass.states.get(self._headcountSensor).state)
 
@@ -252,8 +302,12 @@ class luxLightInstance:
             #     },
             # )
 
+        # and reschedule
+        self.scheduleOffTimes()
 
-    def hardOff(self):
+    # this is called by track_point_in_time so needs a rednudant  arg
+    # i need to understand why
+    def hardOff(self, call):
 
         service_data = {"entity_id": self._offScene}
         _LOGGER.info("{} to vacant FORCED ".format(self._name))
@@ -261,10 +315,16 @@ class luxLightInstance:
         self._hass.services.call("scene", "turn_on", service_data)
         self.saveState(lastKnownRunState)
 
-    def resetCheck(self):
+        # and reschedule
+        self.scheduleOffTimes()
+
+
+    def resetCheck(self, call):
 
         lastKnownRunState = {"state": "check", "scene": "unknown"}
         self.saveState(lastKnownRunState)
+
+        self.scheduleReset()
 
 
 
@@ -282,25 +342,25 @@ def setup(hass, baseConfig):
     luxInstances.append(luxLightInstance(hass,config["city"],"city"))
 
 
-    # TODO check this function
-    def handle_turnoff(call):
-        for instance in luxInstances:
-            instance.softOff()
+    # # TODO check this function
+    # def handle_turnoff(call):
+    #     for instance in luxInstances:
+    #         instance.softOff(None)
 
-    # this gets called from an automation, it's a hard OFF
-    def handle_forceoff(call):
-        for instance in luxInstances:
-            instance.hardOff()
+    # # this gets called from an automation, it's a hard OFF
+    # def handle_forceoff(call):
+    #     for instance in luxInstances:
+    #         instance.hardOff(None)
 
     # reset my state, normally done sunset-hrs
-    def handle_enableCheck(call):
-        for instance in luxInstances:
-            instance.resetCheck()
+    # def handle_enableCheck(call):
+    #     for instance in luxInstances:
+    #         instance.resetCheck()
 
 
-    hass.services.register(DOMAIN, "enable_check", handle_enableCheck)
-    hass.services.register(DOMAIN, "turn_off", handle_turnoff)
-    hass.services.register(DOMAIN, "force_off", handle_forceoff)
+    # hass.services.register(DOMAIN, "enable_check", handle_enableCheck)
+    # hass.services.register(DOMAIN, "turn_off", handle_turnoff)
+    # hass.services.register(DOMAIN, "force_off", handle_forceoff)
 
 
     # Return boolean to indicate that initialization was successfully.
