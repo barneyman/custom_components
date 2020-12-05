@@ -57,32 +57,38 @@ CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.Schema(
             {
-                "city": vol.Schema({
-                    vol.Required("presence_binary"): cv.string,  
-                    vol.Required("lux_sensor"): cv.string,
-                    vol.Required("off_scene"): cv.string,
-                    "softOff":offSchema,
-                    "hardOff":offSchema,
-                    "reset":offSchema,
+                vol.Required("instances"): vol.All(
+                    cv.ensure_list,
+                    [
+                        {
+                            vol.Required("name"): cv.string,  
+                            vol.Required("presence_binary"): cv.string,  
+                            vol.Required("lux_sensor"): cv.string,
+                            vol.Required("off_scene"): cv.string,
+                            "softOff":offSchema,
+                            "hardOff":offSchema,
+                            "reset":offSchema,
 
-                    vol.Optional("jitter", default=10):vol.All(
-                            vol.Coerce(float), vol.Range(min=0, max=20)
-                        ),
-                    "absent": vol.Schema({
-                        vol.Optional("unlit_scene"): cv.string,
-                        vol.Optional("lit_scene"): cv.string,
-                        vol.Required("minLux"): vol.All(
-                            vol.Coerce(float), vol.Range(min=0, max=100)
-                        ),
-                    }),
-                    "present": vol.Schema({
-                        vol.Optional("unlit_scene"): cv.string,
-                        vol.Optional("lit_scene"): cv.string,
-                        vol.Required("minLux"): vol.All(
-                            vol.Coerce(float), vol.Range(min=0, max=100)
-                        ),
-                    }),
-                })
+                            vol.Optional("jitter", default=10):vol.All(
+                                    vol.Coerce(float), vol.Range(min=0, max=20)
+                                ),
+                            "absent": vol.Schema({
+                                vol.Optional("unlit_scene"): cv.string,
+                                vol.Optional("lit_scene"): cv.string,
+                                vol.Required("minLux"): vol.All(
+                                    vol.Coerce(float), vol.Range(min=0, max=100)
+                                ),
+                            }),
+                            "present": vol.Schema({
+                                vol.Optional("unlit_scene"): cv.string,
+                                vol.Optional("lit_scene"): cv.string,
+                                vol.Required("minLux"): vol.All(
+                                    vol.Coerce(float), vol.Range(min=0, max=100)
+                                ),
+                            }),
+                        }
+                    ]
+                )
             }
         )
     }, extra=vol.ALLOW_EXTRA
@@ -93,11 +99,14 @@ luxInstances=[]
 
 class luxLightInstance:
 
-    def __init__(self, hass, config, name):
+    def __init__(self, hass, config):
 
         self._hass=hass
-        self._name=name
         self._config=config
+
+        self._name=config.get("name")
+
+        _LOGGER.info("Creating luxLightInstance '{}'".format(self._name))
 
         self._headcountSensor=config.get("presence_binary")
         self._luxSensor=config.get("lux_sensor")
@@ -109,7 +118,7 @@ class luxLightInstance:
 
 
         # prime the storing
-        hass.data[DOMAIN] = { name: {} }
+        hass.data[DOMAIN] = { self._name: {} }
 
         lastKnownRunState = {"state": "unknown", "scene": "unknown"}
         self.saveState(lastKnownRunState)
@@ -119,7 +128,7 @@ class luxLightInstance:
             if new_state is None:
                 return
 
-            _LOGGER.info("State change for {} forcing lux check for {}".format(entity_id, name))
+            _LOGGER.info("State change for {} forcing lux check for {}".format(entity_id, self._name))
 
             result = await hass.async_add_executor_job(self.handleSensoryCheck)
 
@@ -190,8 +199,7 @@ class luxLightInstance:
         # also allows for 'unknown' after a reboot
         self._lastKnownRunState = self.loadState()
 
-        _LOGGER.debug("lastKnownRunState")
-        _LOGGER.debug(self._lastKnownRunState)
+        _LOGGER.debug("lastKnownRunState : {}".format(self._lastKnownRunState))
 
         if self._lastKnownRunState["state"] == "off":
             return
@@ -231,15 +239,14 @@ class luxLightInstance:
             nextStateValue["state"] = "absent"
             meta = self._absentDetail
 
-        _LOGGER.debug("meta")
-        _LOGGER.debug(meta)
+        _LOGGER.debug("meta : {}".format(meta))
 
         # work out minlux
         minLuxValue = meta["minLux"]
         # to stop us turning on and off at the threshold 
         if self._lastKnownRunState["scene"]=="lit_scene":
             minLuxValue=minLuxValue+self._luxJitter
-            _LOGGER.debug("applying jitter {} {} {}".format(meta["minLux"],self._luxJitter,minLuxValue))
+            _LOGGER.debug("applying jitter {} + {} = {}".format(meta["minLux"],self._luxJitter,minLuxValue))
 
 
         # check lux
@@ -248,8 +255,7 @@ class luxLightInstance:
         else:
             nextStateValue["scene"] = "unlit_scene"
 
-        _LOGGER.debug("nextStateValue")
-        _LOGGER.debug(nextStateValue)
+        _LOGGER.debug("nextStateValue : {}".format(nextStateValue))
 
         # do we need a transition - off gets checked for above
         if self._lastKnownRunState["state"] != nextStateValue["state"]:
@@ -259,6 +265,8 @@ class luxLightInstance:
                 sceneToGo = meta[nextStateValue["scene"]]
                 _LOGGER.info("turning on %s", sceneToGo)
                 self._hass.services.call("scene", "turn_on", {"entity_id": sceneToGo})
+            else:
+                _LOGGER.info("no scene in config for this state")
 
             self.saveState(nextStateValue)
             return
@@ -270,6 +278,8 @@ class luxLightInstance:
                 sceneToGo = meta[nextStateValue["scene"]]
                 _LOGGER.info("turning on %s", sceneToGo)
                 self._hass.services.call("scene", "turn_on", {"entity_id": sceneToGo})
+            else:
+                _LOGGER.info("no scene in config for this state")
 
             self.saveState(nextStateValue)
             return
@@ -343,11 +353,9 @@ def setup(hass, baseConfig):
 
     config = baseConfig[DOMAIN]
 
-
-
-    # get the city one
-
-    luxInstances.append(luxLightInstance(hass,config["city"],"city"))
+    # iterate thru the items
+    for eachInstance in config["instances"]:
+        luxInstances.append(luxLightInstance(hass,eachInstance))
 
 
     # # TODO check this function
