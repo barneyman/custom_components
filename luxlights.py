@@ -156,15 +156,23 @@ class luxLightInstance:
 
     def scheduleOffTimes(self):
 
+        self.scheduleSoftOffTimes()
+        self.scheduleHardOffTimes()
+
+
+    def scheduleSoftOffTimes(self):
+
         # get my hard/soft off times
         self._softOff=self.timeStringToDateTime(self._config["softOff"]["at"])
-        self._hardOff=self.timeStringToDateTime(self._config["hardOff"]["at"])
-
-        _LOGGER.info("Off times are {} & {}".format(self._softOff, self._hardOff))
-
+        _LOGGER.info("Soft Off times is {}".format(self._softOff))
         track_point_in_time(self._hass, self.softOff, self._softOff)
-        track_point_in_time(self._hass, self.hardOff, self._hardOff)
 
+    def scheduleHardOffTimes(self):
+
+        # get my hard/soft off times
+        self._hardOff=self.timeStringToDateTime(self._config["hardOff"]["at"])
+        _LOGGER.info("Hard Off times is {}".format(self._hardOff))
+        track_point_in_time(self._hass, self.hardOff, self._hardOff)
 
 
     def handleSensoryCheck(self):
@@ -303,7 +311,7 @@ class luxLightInstance:
             # )
 
         # and reschedule
-        self.scheduleOffTimes()
+        self.scheduleSoftOffTimes()
 
     # this is called by track_point_in_time so needs a rednudant  arg
     # i need to understand why
@@ -316,7 +324,7 @@ class luxLightInstance:
         self.saveState(lastKnownRunState)
 
         # and reschedule
-        self.scheduleOffTimes()
+        self.scheduleHardOffTimes()
 
 
     def resetCheck(self, call):
