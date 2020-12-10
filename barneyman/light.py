@@ -95,25 +95,34 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry)
 
     # simply so i have a ref to async_add_devices
-    def scanForLights(self):
-        _LOGGER.info("scanForLights Called!!!!!")
+    def addFoundLights(self):
+        _LOGGER.info("addFoundLights Called!!!!!")
 
         workingList = hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][
             DEVICES_FOUND_LIGHT
         ].copy()
+
+        if len(workingList)==0:
+            _LOGGER.info("Nothing found")
+            return
+
+
         hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_LIGHT] = []
 
         for newhost in workingList:
-            addBJFlight(newhost, async_add_devices, hass)
+            if not addBJFlight(newhost, async_add_devices, hass):
+                hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_LIGHT].append(newhost)
+                _LOGGER.info("{} re-added to add list}".format(newhost))
+
 
     # Search for devices
     # removing this causes devices o not be discovered? specuatoive change, enabkibg
-    #await hass.async_add_executor_job(scanForLights(0))
-    scanForLights(0)
+    #await hass.async_add_executor_job(addFoundLights(0))
+    addFoundLights(0)
 
 
     # then schedule this again for 40 seconds.
-    async_track_time_interval(hass, scanForLights, timedelta(seconds=30))
+    async_track_time_interval(hass, addFoundLights, timedelta(seconds=30))
 
 
 # doesn't appear to be called
@@ -157,8 +166,12 @@ def addBJFlight(hostname, add_devices, hass):
         if add_devices is not None:
             add_devices(potentials)
 
+            return True
+
     else:
-        _LOGGER.error("Failed to query %s", hostname)
+        _LOGGER.error("Failed to query %s at onboarding", hostname)
+
+    return False
 
 
 class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):

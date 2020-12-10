@@ -67,6 +67,45 @@ def doPost(
     return doQuery(hostname, url, returnJson, httpmethod, timeout, jsonBody)
 
 
+# async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeout=10, jsonBody=None):
+#     """Get the latest data from REST service with provided method."""
+    
+#     _async_client = httpx.AsyncClient(verify=self._verify_ssl)
+
+#     _LOGGER.info("async_doQuery %s%s %s", hostname, url, httpmethod)
+#     try:
+#         response = await _async_client.request(
+#             httpmethod,
+#             url,
+#             headers=None,
+#             params=None,
+#             auth=None,
+#             data=jsonBody,
+#             timeout=timeout,
+#         )
+#         if returnJson:
+#             return json.loads(response.text)
+#         else
+#             return True
+
+#     except httpx.RequestError as ex:
+#         _LOGGER.error("Error fetching data: %s failed with %s", self._resource, ex)
+
+#         return None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class BJFDeviceInfo:
     def __init__(self, config):
         self._config = config
@@ -107,7 +146,8 @@ class BJFChildDeviceInfo:
 
 
 
-
+# this can be reused by a single sensor
+# when it's async, the logic is a bit more comples
 
 
 class BJFRestData(RestData):
@@ -130,6 +170,7 @@ class BJFRestData(RestData):
         self._lastUpdate = None
         self._cacheTimeout = cacheTimeout
         self._hass = hass
+        self._isUpdating=False
 
     def resetCache(self):
         self._lastUpdate = None
@@ -152,11 +193,12 @@ class BJFRestData(RestData):
 
 
     async def async_update(self):
+
+        doAnUpdate=False
+
         if self._lastUpdate is None or self.data is None:
             _LOGGER.debug("BJFRestData - first update")
-            # changed to async, update deprecated
-            await self.async_updateRestData()
-
+            doAnUpdate=True
         else:
             now = datetime.now()
             if (now - self._lastUpdate).total_seconds() > self._cacheTimeout:
@@ -164,9 +206,26 @@ class BJFRestData(RestData):
                     "BJFRestData - data is stale %d secs",
                     (now - self._lastUpdate).total_seconds(),
                 )
-                await self.async_updateRestData()
+                doAnUpdate=True
             else:
                 _LOGGER.debug("BJFRestData - cache hit")
+
+        if doAnUpdate:
+
+            if self._isUpdating != True:
+                self._isUpdating=True
+
+                # changed to async, update deprecated
+                await self.async_updateRestData()
+
+                self._isUpdating=False
+            
+            else:
+                _LOGGER.debug("BJFRestData - Waiting on another async ...")
+
+                # just spin until it's been updated
+                while self._isUpdating:
+                    await asyncio.sleep(0.01)
 
     def update(self):
 

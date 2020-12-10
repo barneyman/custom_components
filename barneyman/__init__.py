@@ -86,7 +86,10 @@ async def async_setup(hass, baseConfig):
         },
     }
 
+    # uses the bounjour sniffer above
     def searchForDevices(self):
+
+        _LOGGER.debug("Scanning mdns ...")
 
         # always do a local discovery
         for host in listener.host_addresses:
@@ -100,6 +103,8 @@ async def async_setup(hass, baseConfig):
                 hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][
                     DEVICES_FOUND_UNQUALIFIED
                 ].append(host)
+
+            _LOGGER.debug("adding UNQUALIFIED local mdns host {}".format(host))
 
         # then ask the beachheads
         for bhead in hass.data[DOMAIN][DISCOVERY_ROOT][BEACH_HEAD]:
@@ -127,7 +132,12 @@ async def async_setup(hass, baseConfig):
                             DEVICES_FOUND_UNQUALIFIED
                         ].append(host["ip"])
 
-            _LOGGER.debug(hass.data[DOMAIN][DISCOVERY_ROOT])
+                    _LOGGER.debug("adding UNQUALIFIED beachhead-found host {}".format(host["ip"]))
+
+
+        _LOGGER.debug(hass.data[DOMAIN][DISCOVERY_ROOT])
+
+        _LOGGER.debug("Qualifying ....")
 
         # and assume we're done with them
         for host in hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][
@@ -194,7 +204,7 @@ async def async_setup(hass, baseConfig):
     # await hass.async_add_executor_job()
     searchForDevices(0)
     
-    async_track_time_interval(hass, searchForDevices, timedelta(seconds=120))
+    async_track_time_interval(hass, searchForDevices, timedelta(seconds=30))
 
     return True
 
