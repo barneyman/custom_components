@@ -36,25 +36,34 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     async_add_devices([barneymanSensor(hass)])
 
     # simply so i have a ref to async_add_devices
-    def scanForSensors(self):
-        _LOGGER.info("scanForSensors Called!!!!!")
+    def addFoundSensors(self):
+        _LOGGER.info("addFoundSensors Called!!!!!")
 
         workingList = hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][
             DEVICES_FOUND_SENSOR
         ].copy()
+
+        if len(workingList)==0:
+            _LOGGER.info("Nothing found")
+            return
+
+
         hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_SENSOR] = []
 
         for newhost in workingList:
             _LOGGER.info("addBJFsensor %s", newhost)
-            addBJFsensor(newhost, async_add_devices, hass)
+            if not addBJFsensor(newhost, async_add_devices, hass):
+                hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_SENSOR].append(newhost)
+                _LOGGER.info("{} re-added to add list}".format(newhost))
+
 
     # Search for devices
     # removing this causes devices o not be discovered? specuatoive change, enabkibg
-    # await hass.async_add_executor_job(scanForSensors(0))
-    scanForSensors(0)
+    # await hass.async_add_executor_job(addFoundSensors(0))
+    addFoundSensors(0)
 
     # then schedule this again for X seconds.
-    async_track_time_interval(hass, scanForSensors, timedelta(seconds=30))
+    async_track_time_interval(hass, addFoundSensors, timedelta(seconds=30))
 
     return True
 
@@ -199,8 +208,12 @@ def addBJFsensor(hostname, add_devices, hass):
                     sensorsToAdd.append(potential)
 
         add_devices(sensorsToAdd)
+
+        return True
     else:
         _LOGGER.error("Failed to query %s", hostname)
+
+    return False
 
 
 # in py, vtable priority is left to right

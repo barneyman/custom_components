@@ -16,6 +16,7 @@ import json
 
 from homeassistant.helpers.event import async_track_state_change, async_track_point_in_time, track_point_in_time
 from homeassistant.util.dt import as_local, utcnow
+from homeassistant.helpers.entity import Entity
 import datetime
 
 
@@ -97,7 +98,7 @@ CONFIG_SCHEMA = vol.Schema(
 luxInstances=[]
 
 
-class luxLightInstance:
+class luxLightInstance(Entity):
 
     def __init__(self, hass, config):
 
@@ -343,6 +344,40 @@ class luxLightInstance:
         self.saveState(lastKnownRunState)
 
         self.scheduleReset()
+
+    # sensor stuff
+
+    @property
+    def unique_id(self):
+        """Return unique ID for sensor."""
+        return "LuxSensor_"+self._name
+
+    @property
+    def name(self):
+        return "LuxSensor "+self._name
+
+    @property
+    def state(self):
+        """Return the state of the binary sensor."""
+        return STATE_ON
+
+    def update(self):
+        pass
+
+
+    # @property
+    # def state_attributes(self) -> Dict[str, Any]:
+
+    #     # how many are there?
+    #     listFound=self._hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_ADDED]
+
+
+    #     data = {
+    #         "deviceCount": len(listFound),
+    #         "devices": listFound
+    #     }
+
+    #     return data
 
 
 

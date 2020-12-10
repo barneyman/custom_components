@@ -31,24 +31,30 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("CAMERA async_setup_entry: %s", config_entry)
 
     # simply so i have a ref to async_add_devices
-    def scanForCameras(self):
-        _LOGGER.info("scanForCameras Called!!!!!")
+    def addFoundCameras(self):
+        _LOGGER.info("addFoundCameras Called!!!!!")
 
         workingList = hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][
             DEVICES_FOUND_CAMERA
         ].copy()
+
+        if len(workingList)==0:
+            _LOGGER.info("Nothing found")
+            return
+
         hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_CAMERA] = []
 
         for newhost in workingList:
             _LOGGER.info("addBJFcamera %s", newhost)
-            addBJFcamera(newhost, async_add_devices, hass)
+            if not addBJFcamera(newhost, async_add_devices, hass):
+                hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_CAMERA].append(newhost)
 
     # Search for devices
     # removing this causes devices o not be discovered? specuatoive change, enabkibg
-    scanForCameras(0)
+    addFoundCameras(0)
 
     # then schedule this again for X seconds.
-    async_track_time_interval(hass, scanForCameras, timedelta(seconds=30))
+    async_track_time_interval(hass, addFoundCameras, timedelta(seconds=30))
 
     return True
 
@@ -97,8 +103,12 @@ def addBJFcamera(hostname, add_devices, hass):
 
         add_devices(camerasToAdd)
 
+        return True
+
     else:
         _LOGGER.error("Failed to query %s", hostname)
+    
+    return False
 
 
 # in py, vtable priority is left to right
