@@ -59,13 +59,15 @@ class FlowHandler(config_entries.ConfigFlow):
 
     # don't know when this is called
     async def async_step_import(self, user_input):
-        _LOGGER.info("barneyman async_step_import ")
+        _LOGGER.critical("barneyman async_step_import ")
         return self.async_abort(reason="under_construction")
 
-    # can't get this called!!
+    # when i'm mdns discovered
     async def async_step_zeroconf(self, user_input):
         """Handle zeroconf discovery."""
         host = user_input["host"]
+
+        _LOGGER.critical("barneyman async_step_zeroconf called : {}".format(user_input))
 
         return self.async_abort(reason="under_construction")
 
