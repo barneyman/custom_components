@@ -258,9 +258,10 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):
         This is the only method that should fetch new data for Home Assistant.
         """
 
-        self.subscribe("switch")
+        self.subscribe("light")
 
-        _LOGGER.info("doing update")
+        _LOGGER.info("doing light update")
+        
         self.base_update()
 
     def base_update(self):

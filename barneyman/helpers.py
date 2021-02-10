@@ -250,7 +250,7 @@ class BJFListener:
     def __init__(self, transport, hass):
 
         self._lastSubscribed=None
-        self._subscribeTimeoutMinutes=60
+        self._subscribeTimeoutMinutes=5
 
         # spin up a thread, tell it the udp
         if transport == "tcp":
@@ -339,7 +339,7 @@ class BJFListener:
         # and forgotten we love them
         if self._lastSubscribed is None or ((time.time()-self._lastSubscribed)>self._subscribeTimeoutMinutes*60):
 
-            _LOGGER.debug("Subscribing %s", self.entity_id)
+            _LOGGER.debug("Subscribing %s '%s'",deviceType, self.entity_id)
 
             recipient = {}
             if self.getPort() is not None:

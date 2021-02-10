@@ -290,10 +290,9 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
 
         self._is_on = None
 
+    # sent from an announcer
     def HandleIncomingPacket(self, data):
-
         payload = json.loads(data.decode("utf-8"))
-
         _LOGGER.debug(payload)
         self._is_on = payload["state"]
         _LOGGER.debug("About to set %s state to %s", self.entity_id, self.state)
@@ -308,7 +307,7 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
     @property
     def state(self):
         """Return the state of the binary sensor."""
-        return STATE_ON if self.is_on else STATE_OFF
+        return self._is_on #STATE_ON if self._is_on==True else STATE_OFF
 
     @property
     def device_class(self):
@@ -317,7 +316,18 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
 
     def update(self):
         # subscribe
+        _LOGGER.info("doing binarysensor update")
         self.subscribe("sensor")
-
         # call base
         return RestSensor.update(self)
+
+    async def async_update(self):
+        # subscribe
+        _LOGGER.info("doing binarysensor async_update")
+        self.subscribe("sensor")
+        # call base
+        await RestSensor.async_update(self)
+        # work out my on state (._state is provided by the restsensor)
+        self._is_on=self._state
+                        
+
