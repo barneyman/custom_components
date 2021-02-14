@@ -7,12 +7,9 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import threading
 import socket
 import time
+import httpx
 from .barneymanconst import (
-    BEACH_HEAD,
-    DEVICES_ADDED,
-    DISCOVERY_ROOT,
-    DEVICES_FOUND,
-    DEVICES_FOUND_SENSOR,
+    BARNEYMAN_HOST,
     LISTENING_PORT,
     AUTH_TOKEN
 )
@@ -41,6 +38,7 @@ def doExists(hostname):
 def doQuery(
     hostname, url, returnJson=False, httpmethod="GET", timeout=10, jsonBody=None
 ):
+
     try:
         _LOGGER.info("doQuery %s%s %s", hostname, url, httpmethod)
         conn = http.client.HTTPConnection(hostname, timeout=timeout)
@@ -66,43 +64,34 @@ def doPost(
 ):
     return doQuery(hostname, url, returnJson, httpmethod, timeout, jsonBody)
 
+async def async_doPost(
+    hostname, url, jsonBody=None, returnJson=False, httpmethod="POST", timeout=5
+):
+    return async_doQuery(hostname, url, returnJson, httpmethod, timeout, jsonBody)
 
-# async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeout=10, jsonBody=None):
+
+async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeout=10, jsonBody=None):
 #     """Get the latest data from REST service with provided method."""
-    
-#     _async_client = httpx.AsyncClient(verify=self._verify_ssl)
 
-#     _LOGGER.info("async_doQuery %s%s %s", hostname, url, httpmethod)
-#     try:
-#         response = await _async_client.request(
-#             httpmethod,
-#             url,
-#             headers=None,
-#             params=None,
-#             auth=None,
-#             data=jsonBody,
-#             timeout=timeout,
-#         )
-#         if returnJson:
-#             return json.loads(response.text)
-#         else
-#             return True
+    builtUrl="http://"+hostname+url
 
-#     except httpx.RequestError as ex:
-#         _LOGGER.error("Error fetching data: %s failed with %s", self._resource, ex)
+    _LOGGER.warning("barneyman async_doQuery to %s", builtUrl)
 
-#         return None
-
-
-
-
-
-
-
-
-
-
-
+    async with httpx.AsyncClient() as client:
+        response = await client.request(
+            httpmethod,
+            builtUrl,
+            headers=None,
+            params=None,
+            auth=None,
+            data=jsonBody,
+            timeout=timeout,
+        )
+        if returnJson:
+            _LOGGER.warning("barneyman async_doQuery returned  %s", response.text)
+            return json.loads(response.text)
+        else:
+            return True
 
 
 
@@ -182,7 +171,7 @@ class BJFRestData(RestData):
             asyncio.run_coroutine_threadsafe(RestData.async_update(self), self._hass.loop).result(5)
             self._lastUpdate = datetime.now()
         except Exception as e:
-            _LOGGER.warning("exception %s", e)
+            _LOGGER.warning("updateRestData exception %s", e)
 
 
     async def async_updateRestData(self):
@@ -276,9 +265,9 @@ class BJFListener:
 
         # get the available port
         if self._listenThread is not None:
-            self._port = hass.data[DOMAIN][DISCOVERY_ROOT][LISTENING_PORT]
+            self._port = hass.data[DOMAIN][LISTENING_PORT]
             # and inc it
-            hass.data[DOMAIN][DISCOVERY_ROOT][LISTENING_PORT] = self._port + 1
+            hass.data[DOMAIN][LISTENING_PORT] = self._port + 1
 
     def udpListener(self):
         _LOGGER.debug("udpListener started port %d ...", self._port)
@@ -316,7 +305,7 @@ class BJFListener:
                 self.HandleIncomingPacket(data)
 
             except Exception as e:
-                _LOGGER.warning("exception %s", e)
+                _LOGGER.warning("tcpListener exception %s", e)
 
     def HandleIncomingPacket(self, data):
         raise NotImplementedError()
@@ -341,14 +330,7 @@ class BJFListener:
 
             _LOGGER.debug("Subscribing %s '%s'",deviceType, self.entity_id)
 
-            recipient = {}
-            if self.getPort() is not None:
-                recipient["port"] = self.getPort()
-            recipient[deviceType] = self._ordinal
-            recipient["endpoint"] = "/api/states/" + self.entity_id  #  light.study_light
-            recipient["auth"] = self.hass.data[DOMAIN][AUTH_TOKEN]
-
-            _LOGGER.debug(recipient)
+            recipient = self.build_recipient(deviceType)
 
             # advise the sensor we're listening
             doPost(self._hostname, "/json/listen", json.dumps(recipient))
@@ -356,5 +338,35 @@ class BJFListener:
             self._lastSubscribed=time.time()
 
         else:
-        
             _LOGGER.debug("subscribe ignored")
+
+
+    async def async_subscribe(self, deviceType):
+
+        # we do this periodicall, in case the remote device has been rebooted
+        # and forgotten we love them
+        if self._lastSubscribed is None or ((time.time()-self._lastSubscribed)>self._subscribeTimeoutMinutes*60):
+
+            _LOGGER.debug("Subscribing %s '%s'",deviceType, self.entity_id)
+
+            recipient = self.build_recipient(deviceType)
+
+            # advise the sensor we're listening
+            await async_doPost(self._hostname, "/json/listen", json.dumps(recipient))
+
+            self._lastSubscribed=time.time()
+
+        else:
+            _LOGGER.debug("subscribe ignored")
+
+    def build_recipient(self,deviceType):
+        recipient = {}
+        if self.getPort() is not None:
+            recipient["port"] = self.getPort()
+        recipient[deviceType] = self._ordinal
+        recipient["endpoint"] = "/api/states/" + self.entity_id  #  light.study_light
+        recipient["auth"] = self.hass.data[DOMAIN][AUTH_TOKEN]
+
+        _LOGGER.debug(recipient)
+
+        return recipient
