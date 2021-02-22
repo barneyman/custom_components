@@ -11,11 +11,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.components.camera import Camera
 from .barneymanconst import (
-    BEACH_HEAD,
-    DEVICES_ADDED,
-    DISCOVERY_ROOT,
-    DEVICES_FOUND,
-    DEVICES_FOUND_CAMERA,
+    BARNEYMAN_HOST,
     LISTENING_PORT,
     AUTH_TOKEN,
 )
@@ -28,33 +24,9 @@ DOMAIN = "barneyman"
 # called from entity_platform.py line 129
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
-    _LOGGER.debug("CAMERA async_setup_entry: %s", config_entry)
+    _LOGGER.debug("CAMERA async_setup_entry: %s", config_entry.data)
 
-    # simply so i have a ref to async_add_devices
-    def addFoundCameras(self):
-        _LOGGER.info("addFoundCameras Called!!!!!")
-
-        workingList = hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][
-            DEVICES_FOUND_CAMERA
-        ].copy()
-
-        if len(workingList)==0:
-            _LOGGER.info("Nothing found")
-            return
-
-        hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_CAMERA] = []
-
-        for newhost in workingList:
-            _LOGGER.info("addBJFcamera %s", newhost)
-            if not addBJFcamera(newhost, async_add_devices, hass):
-                hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_CAMERA].append(newhost)
-
-    # Search for devices
-    # removing this causes devices o not be discovered? specuatoive change, enabkibg
-    addFoundCameras(0)
-
-    # then schedule this again for X seconds.
-    async_track_time_interval(hass, addFoundCameras, timedelta(seconds=30))
+    await hass.async_add_executor_job(addBJFcamera,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
 
     return True
 
@@ -78,30 +50,31 @@ def addBJFcamera(hostname, add_devices, hass):
 
 
         # add a bunch of cameras
-        for eachCamera in config["cameraConfig"]:
+        if "cameraConfig" in config:
+            for eachCamera in config["cameraConfig"]:
 
-            potential = None
+                potential = None
 
-            _LOGGER.info("Potential BJFRestSensor")
+                _LOGGER.info("Potential BJFRestSensor")
 
-            camNumber=eachCamera["camera"]
+                camNumber=eachCamera["camera"]
 
-            potential = BJFEspCamera(
-                hass,
-                mac,
-                hostname,
-                # entity name - +1 for the cosmetic name - that's confusing!
-                friendlyName+" "+eachCamera["name"] + " " + str(camNumber+1),
-                url+str(camNumber),
-                camNumber,
-                config,
-            )
+                potential = BJFEspCamera(
+                    hass,
+                    mac,
+                    hostname,
+                    # entity name - +1 for the cosmetic name - that's confusing!
+                    friendlyName+" "+eachCamera["name"] + " " + str(camNumber+1),
+                    url+str(camNumber),
+                    camNumber,
+                    config,
+                )
 
-            if potential is not None:
-                _LOGGER.info("Adding camera %s", potential._unique_id)
-                camerasToAdd.append(potential)
+                if potential is not None:
+                    _LOGGER.info("Adding camera %s", potential._unique_id)
+                    camerasToAdd.append(potential)
 
-        add_devices(camerasToAdd)
+            add_devices(camerasToAdd)
 
         return True
 

@@ -1,13 +1,12 @@
 {
   "config": {
-    "title": "* barneyman",
+    "title": "barneyman",
     "step": {
-      "user": {
+      "parseuser": {
         "title": "Configure barneyman Integration",
         "description": "Enter the IP address of a 'remote' barneyman device",
         "data": {
-          "beachhead": "The beachhead or blank for mdns",
-          "auth": "The long lived bearer token"
+          "host": "Host IP Address"
         }
       }
     },
@@ -16,7 +15,9 @@
       "device_fail": "Unexpected error creating device.",
       "already_configured": "Device is already configured",
       "under_construction": "Still under construction",
-      "nexist": "Unable to communicate with device"
+      "nexist": "Unable to communicate with device",
+      "no_host": "no host supplied",
+      "unexpected": "unexpected user data"
     }
   }
 }

@@ -7,11 +7,7 @@ from homeassistant.components.rest.sensor import RestSensor, RestData
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import (
-    BEACH_HEAD,
-    DEVICES_ADDED,
-    DISCOVERY_ROOT,
-    DEVICES_FOUND,
-    DEVICES_FOUND_SENSOR,
+    BARNEYMAN_HOST,
     LISTENING_PORT,
     AUTH_TOKEN,
 )
@@ -29,41 +25,9 @@ DOMAIN = "barneyman"
 # called from entity_platform.py line 129
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
-    _LOGGER.debug("SENSOR async_setup_entry: %s", config_entry)
+    _LOGGER.debug("SENSOR async_setup_entry: %s", config_entry.data)
 
-    # first off, add my own barneyman sensor that lets me query how this platform is working
-    _LOGGER.debug("adding barneyman sensor:")
-    async_add_devices([barneymanSensor(hass)])
-
-    # simply so i have a ref to async_add_devices
-    def addFoundSensors(self):
-        _LOGGER.info("addFoundSensors Called!!!!!")
-
-        workingList = hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][
-            DEVICES_FOUND_SENSOR
-        ].copy()
-
-        if len(workingList)==0:
-            _LOGGER.info("Nothing found")
-            return
-
-
-        hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_SENSOR] = []
-
-        for newhost in workingList:
-            _LOGGER.info("addBJFsensor %s", newhost)
-            if not addBJFsensor(newhost, async_add_devices, hass):
-                hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_SENSOR].append(newhost)
-                _LOGGER.info("{} re-added to add list}".format(newhost))
-
-
-    # Search for devices
-    # removing this causes devices o not be discovered? specuatoive change, enabkibg
-    # await hass.async_add_executor_job(addFoundSensors(0))
-    addFoundSensors(0)
-
-    # then schedule this again for X seconds.
-    async_track_time_interval(hass, addFoundSensors, timedelta(seconds=30))
+    await hass.async_add_executor_job(addBJFsensor,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
 
     return True
 
@@ -71,42 +35,8 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 
 
-class barneymanSensor(Entity):    
-
-    def __init__(self,hass):
-        self._unique_id = "barneyman_admin"
-        self._hass=hass
-
-    @property
-    def unique_id(self):
-        """Return unique ID for sensor."""
-        return self._unique_id
-
-    @property
-    def name(self):
-        return "barneyman monitor"
-
-    @property
-    def state(self):
-        """Return the state of the binary sensor."""
-        return STATE_ON
-
-    def update(self):
-        pass
-
-    @property
-    def state_attributes(self) -> Dict[str, Any]:
-
-        # how many are there?
-        listFound=self._hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_ADDED]
 
 
-        data = {
-            "deviceCount": len(listFound),
-            "devices": listFound
-        }
-
-        return data
 
 
 def addBJFsensor(hostname, add_devices, hass):
@@ -129,85 +59,86 @@ def addBJFsensor(hostname, add_devices, hass):
 
 
         # add a bunch of rest sensors
-        for eachSensor in config["sensorConfig"]:
-            for element in eachSensor["elements"]:
-                deviceClass = element["type"]
-                potential = None
+        if "sensorConfig" in config:
+            for eachSensor in config["sensorConfig"]:
+                for element in eachSensor["elements"]:
+                    deviceClass = element["type"]
+                    potential = None
 
-                # special case - if there's an instant sensor - PIR generally
-                if "impl" in element:
+                    # special case - if there's an instant sensor - PIR generally
+                    if "impl" in element:
 
-                    sensorValue = Template(
-                        '{{ value_json["sensorState"]['
-                        + str(eachSensor["sensor"])
-                        + "].state"
-                        + " }}",
-                        hass,
-                    )
+                        sensorValue = Template(
+                            '{{ value_json["sensorState"]['
+                            + str(eachSensor["sensor"])
+                            + "].state"
+                            + " }}",
+                            hass,
+                        )
 
-                    _LOGGER.debug(sensorValue)
+                        _LOGGER.debug(sensorValue)
 
-                    _LOGGER.info("Potential BJFBinarySensor")
+                        _LOGGER.info("Potential BJFBinarySensor")
 
-                    potential = BJFBinarySensor(
-                        hass,
-                        element["impl"],
-                        mac,
-                        hostname,
-                        rest,
-                        # entity name
-                        friendlyName+" "+eachSensor["name"] + " " + deviceClass,
-                        deviceClass,
-                        None,
-                        sensorValue,
-                        eachSensor["sensor"],
-                        deviceClass,
-                        config,
-                    )
+                        potential = BJFBinarySensor(
+                            hass,
+                            element["impl"],
+                            mac,
+                            hostname,
+                            rest,
+                            # entity name
+                            friendlyName+" "+eachSensor["name"] + " " + deviceClass,
+                            deviceClass,
+                            None,
+                            sensorValue,
+                            eachSensor["sensor"],
+                            deviceClass,
+                            config,
+                        )
 
-                else:
-                    _LOGGER.info("Potential BJFRestSensor")
+                    else:
+                        _LOGGER.info("Potential BJFRestSensor")
 
-                    # uom, round
+                        # uom, round
 
-                    uom = element["uom"] if "uom" in element else None
-                    numDP = element["round"] if "round" in element else "0"
+                        uom = element["uom"] if "uom" in element else None
+                        numDP = element["round"] if "round" in element else "0"
 
 
-                    # build the template string
-                    sensorValue = Template(
-                        '{{ value_json["sensorState"]['
-                        + str(eachSensor["sensor"])
-                        + "]."
-                        + deviceClass
-                        + " | round("
-                        + numDP
-                        + ") }}",
-                        hass,
-                    )
+                        # build the template string
+                        sensorValue = Template(
+                            '{{ value_json["sensorState"]['
+                            + str(eachSensor["sensor"])
+                            + "]."
+                            + deviceClass
+                            + " | round("
+                            + numDP
+                            + ") }}",
+                            hass,
+                        )
 
-                    _LOGGER.debug(sensorValue)
+                        _LOGGER.debug(sensorValue)
 
-                    potential = BJFRestSensor(
-                        hass,
-                        mac,
-                        hostname,
-                        rest,
-                        # entity name
-                        friendlyName+" "+eachSensor["name"] + " " + deviceClass,
-                        deviceClass,
-                        uom,
-                        sensorValue,
-                        eachSensor["sensor"],
-                        deviceClass,
-                        config,
-                    )
+                        potential = BJFRestSensor(
+                            hass,
+                            mac,
+                            hostname,
+                            rest,
+                            # entity name
+                            friendlyName+" "+eachSensor["name"] + " " + deviceClass,
+                            deviceClass,
+                            uom,
+                            sensorValue,
+                            eachSensor["sensor"],
+                            deviceClass,
+                            config,
+                        )
 
-                if potential is not None:
-                    _LOGGER.info("Adding sensor %s", potential._unique_id)
-                    sensorsToAdd.append(potential)
+                    if potential is not None:
+                        _LOGGER.info("Adding sensor %s", potential._unique_id)
+                        sensorsToAdd.append(potential)
 
-        add_devices(sensorsToAdd)
+            add_devices(sensorsToAdd)
 
         return True
     else:
@@ -232,6 +163,8 @@ class BJFRestSensor(BJFDeviceInfo, RestSensor):
         element,
         config,
     ):
+        _LOGGER.info("Creating sensor.%s", name)
+
         RestSensor.__init__(
             self, hass, rest, name, unit, deviceType, json, None, True, None, None
         )
@@ -290,10 +223,9 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
 
         self._is_on = None
 
+    # sent from an announcer
     def HandleIncomingPacket(self, data):
-
         payload = json.loads(data.decode("utf-8"))
-
         _LOGGER.debug(payload)
         self._is_on = payload["state"]
         _LOGGER.debug("About to set %s state to %s", self.entity_id, self.state)
@@ -308,7 +240,7 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
     @property
     def state(self):
         """Return the state of the binary sensor."""
-        return STATE_ON if self.is_on else STATE_OFF
+        return self._is_on #STATE_ON if self._is_on==True else STATE_OFF
 
     @property
     def device_class(self):
@@ -317,7 +249,18 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
 
     def update(self):
         # subscribe
+        _LOGGER.info("doing binarysensor update")
         self.subscribe("sensor")
-
         # call base
         return RestSensor.update(self)
+
+    async def async_update(self):
+        # subscribe
+        _LOGGER.info("doing binarysensor async_update")
+        await self.async_subscribe("sensor")
+        # call base
+        await RestSensor.async_update(self)
+        # work out my on state (._state is provided by the restsensor)
+        self._is_on=self._state
+                        
+

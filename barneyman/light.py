@@ -10,11 +10,8 @@ import homeassistant.helpers.config_validation as cv
 import homeassistant.util.color as color_util
 from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import (
-    BEACH_HEAD,
-    DEVICES_ADDED,
-    DISCOVERY_ROOT,
-    DEVICES_FOUND,
-    DEVICES_FOUND_LIGHT,AUTH_TOKEN
+    BARNEYMAN_HOST,
+    AUTH_TOKEN
 
 )
 from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost
@@ -92,37 +89,11 @@ async def async_remove_entry(hass, entry):
 
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
-    _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry)
+    _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry.data)
 
-    # simply so i have a ref to async_add_devices
-    def addFoundLights(self):
-        _LOGGER.info("addFoundLights Called!!!!!")
+    await hass.async_add_executor_job(addBJFlight,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
 
-        workingList = hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][
-            DEVICES_FOUND_LIGHT
-        ].copy()
-
-        if len(workingList)==0:
-            _LOGGER.info("Nothing found")
-            return
-
-
-        hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_LIGHT] = []
-
-        for newhost in workingList:
-            if not addBJFlight(newhost, async_add_devices, hass):
-                hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_FOUND][DEVICES_FOUND_LIGHT].append(newhost)
-                _LOGGER.info("{} re-added to add list}".format(newhost))
-
-
-    # Search for devices
-    # removing this causes devices o not be discovered? specuatoive change, enabkibg
-    #await hass.async_add_executor_job(addFoundLights(0))
-    addFoundLights(0)
-
-
-    # then schedule this again for 40 seconds.
-    async_track_time_interval(hass, addFoundLights, timedelta(seconds=30))
+    return True
 
 
 # doesn't appear to be called
@@ -147,26 +118,27 @@ def addBJFlight(hostname, add_devices, hass):
         url = "http://" + config["ip"] + "/json/state"
         rest = BJFRestData(hass, "GET", url, None, None, None, httptimeout=10)
 
-        for switchConfig in config["switchConfig"]:
+        if "switchConfig" in config:
+            for switchConfig in config["switchConfig"]:
 
-            # switch may have the ability to prod us
-            transport = None
-            if "impl" in switchConfig:
-                transport = switchConfig["impl"]
+                # switch may have the ability to prod us
+                transport = None
+                if "impl" in switchConfig:
+                    transport = switchConfig["impl"]
 
-            potential = bjfESPLight(
-                hostname, mac, config, switchConfig["switch"], rest, transport, hass
-            )
+                potential = bjfESPLight(
+                    hostname, mac, config, switchConfig["switch"], rest, transport, hass
+                )
 
-            # does this already exist?
+                # does this already exist?
 
-            _LOGGER.info("adding light %s", potential.unique_id)
-            potentials.append(potential)
+                _LOGGER.info("adding light %s", potential.unique_id)
+                potentials.append(potential)
 
-        if add_devices is not None:
-            add_devices(potentials)
+            if add_devices is not None:
+                add_devices(potentials)
 
-            return True
+                return True
 
     else:
         _LOGGER.error("Failed to query %s at onboarding", hostname)
@@ -221,17 +193,6 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):
         """Return true if light is on."""
         return self._state
 
-    # https://developers.home-assistant.io/docs/en/asyncio_index.html
-
-    # async def async_turn_on(self, **kwargs):
-    #    async_doQuery(self._unique_id, "/button?action=on&port=0", False)
-    # async def async_turn_off(self, **kwargs):
-    #    async_doQuery(self._unique_id, "/button?action=off&port=0", False)
-    # async def async_update(self):
-    #    jsonData=await async_doQuery(self._unique_id, "/json/state", True)
-    #    if jsonData is not None:
-    #        currentState=jsonData["switchState"][0]["state"]
-    #        self._state=True if currentState==1 else False
 
     def turn_on(self, **kwargs):
         """Instruct the light to turn on.
@@ -254,18 +215,95 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):
 
     def update(self):
         """Fetch new state data for this light.
-
         This is the only method that should fetch new data for Home Assistant.
         """
 
-        self.subscribe("switch")
+        self.subscribe("light")
 
-        _LOGGER.info("doing update")
+        _LOGGER.info("doing light update")
+
         self.base_update()
+
+
+    async def async_update(self):
+        """Fetch new state data for this light.
+        This is the only method that should fetch new data for Home Assistant.
+        """
+
+        await self.async_subscribe("light")
+
+        _LOGGER.info("doing light async_update")
+
+        await self.async_base_update()
+
 
     def base_update(self):
 
         self._rest.update()
+
+        return self.parseData()
+
+        # if self._rest.data is None:
+        #     _LOGGER.error("no rest data from %s", self._unique_id)
+        #     return None
+
+        # jsonData = json.loads(self._rest.data)
+
+        # _LOGGER.info(jsonData)
+
+        # if jsonData is not None:
+
+        #     try:
+
+        #         self._name = (
+        #             jsonData["friendlyName"]
+        #             if "friendlyName" in jsonData
+        #             else jsonData["name"]
+        #         )
+
+        #         currentState = jsonData["switchState"][self._ordinal]["state"]
+        #         self._state = True if currentState == 1 else False
+
+        #     except Exception as e:
+        #         _LOGGER.error("Exception in light.base_update %s", e)
+
+        # return jsonData
+
+
+
+    async def async_base_update(self):
+
+        await self._rest.async_update()
+
+        return self.parseData()
+
+        # if self._rest.data is None:
+        #     _LOGGER.error("no rest data from %s", self._unique_id)
+        #     return None
+
+        # jsonData = json.loads(self._rest.data)
+
+        # _LOGGER.info(jsonData)
+
+        # if jsonData is not None:
+
+        #     try:
+
+        #         self._name = (
+        #             jsonData["friendlyName"]
+        #             if "friendlyName" in jsonData
+        #             else jsonData["name"]
+        #         )
+
+        #         currentState = jsonData["switchState"][self._ordinal]["state"]
+        #         self._state = True if currentState == 1 else False
+
+        #     except Exception as e:
+        #         _LOGGER.error("Exception in light.base_update %s", e)
+
+        # return jsonData
+
+    def parseData(self):
 
         if self._rest.data is None:
             _LOGGER.error("no rest data from %s", self._unique_id)
@@ -292,6 +330,7 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):
                 _LOGGER.error("Exception in light.base_update %s", e)
 
         return jsonData
+
 
 
 #################################
@@ -376,36 +415,6 @@ class bjfESPRGBLight(bjfESPLight):
         # else:
         #    self._light.command('on')
 
-    # async def async_turn_on(self, **kwargs):
-    #    """Instruct the light to turn on.
-
-    #    You can skip the brightness part if your light does not support
-    #    brightness control.
-    #    """
-
-    #    if ATTR_BRIGHTNESS in kwargs:
-    #        self._brightness = kwargs.get(ATTR_BRIGHTNESS,255)
-    #    #self._light.turn_on()
-
-    #    if ATTR_HS_COLOR in kwargs:
-    #        self._hs_color=kwargs[ATTR_HS_COLOR]
-
-    #    _LOGGER.info(kwargs)
-    #    _LOGGER.info(self._hs_color)
-    #    _LOGGER.info(self._brightness)
-
-    #        # work out what the rgb val is
-    #    rgb=color_util.color_hsv_to_RGB(self._hs_color[0],self._hs_color[1], (self._brightness/255)*100)
-
-    #    if ATTR_EFFECT in kwargs:
-    #        self._effect=kwargs[ATTR_EFFECT]
-
-    #    if 'action' in kwargs:
-    #        bjfESPLight.turn_on();
-    #    else:
-    #        query="/button?action=on&r={r}&g={g}&b={b}&effect={effect}".format(r=rgb[0], g=rgb[1], b=rgb[2], effect=self._effect)
-    #        _LOGGER.info("querying %s",query)
-    #        async_doQuery(self._unique_id, query, False)
 
     @property
     def effect_list(self) -> list:

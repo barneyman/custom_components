@@ -3,7 +3,7 @@ import voluptuous as vol
 import logging
 from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers import config_entry_flow
-from .barneymanconst import BEACH_HEAD, DEVICES_ADDED, AUTH_TOKEN
+from .barneymanconst import BARNEYMAN_HOST, BARNEYMAN_HOSTNAME
 from .helpers import doExists
 
 
@@ -27,47 +27,86 @@ class FlowHandler(config_entries.ConfigFlow):
         self._import_groups = False
 
     # this gets called thru "integration - Add (big yellow '+' bottom right!)"
+    # or from zeroconf
     async def async_step_user(self, user_input):
         _LOGGER.info("barneyman async_step_user ")
 
         if user_input is None:
-            #
+            # "integration - Add (big yellow '+' bottom right!)"
             _LOGGER.info("presenting UI")
             return self.async_show_form(
-                step_id="user",
+                step_id="parseuser",
                 data_schema=vol.Schema(
-                    {vol.Optional(BEACH_HEAD): str, vol.Required(AUTH_TOKEN): str,}
+                    {vol.Required(BARNEYMAN_HOST): str}
                 ),
             )
 
         _LOGGER.info(user_input)
 
-        if BEACH_HEAD in user_input:
+        return self.async_abort(reason="unexpected")
+
+    async def async_step_parseuser(self, user_input):
+
+        if BARNEYMAN_HOST in user_input:
             _LOGGER.info("Looking for beachhead")
-            title = user_input[BEACH_HEAD]
+            title = user_input[BARNEYMAN_HOST]
 
             # check there IS something there!
-            if not doExists(user_input[BEACH_HEAD]):
-                _LOGGER.warning("%s beachhead does not exist", user_input[BEACH_HEAD])
+            if not doExists(user_input[BARNEYMAN_HOST]):
+                _LOGGER.warning("%s beachhead does not exist", user_input[BARNEYMAN_HOST])
                 return self.async_abort(reason="nexist")
+
+            return self.async_create_entry(title=title, data=user_input)
 
         else:
             title = "mdns Discovery"
             _LOGGER.info("Looking for mdns")
 
-        return self.async_create_entry(title=title, data=user_input)
+        return self.async_abort(reason="no_host")
+
 
     # don't know when this is called
     async def async_step_import(self, user_input):
-        _LOGGER.info("barneyman async_step_import ")
+        _LOGGER.critical("barneyman async_step_import ")
         return self.async_abort(reason="under_construction")
 
-    # can't get this called!!
-    async def async_step_zeroconf(self, user_input):
+    # when i'm mdns discovered
+    async def async_step_zeroconf(self, disco_info):
         """Handle zeroconf discovery."""
-        host = user_input["host"]
 
-        return self.async_abort(reason="under_construction")
+        _LOGGER.debug("barneyman async_step_zeroconf called : {}".format(disco_info))
+
+        if disco_info is None:
+            return self.async_abort(reason="cannot_connect")
+
+        # check we're not already doing this
+        if any(
+            disco_info[BARNEYMAN_HOST] == flow["context"].get(BARNEYMAN_HOST)
+            for flow in self._async_in_progress()
+        ):
+            _LOGGER.info("host {} is already being configured".format(disco_info[BARNEYMAN_HOST]))
+            return self.async_abort(reason="already_in_progress")
+
+        # and check we haven't already seen this
+        _LOGGER.debug("_async_current_entries called : {}".format(self._async_current_entries()))
+        if any(
+            disco_info[BARNEYMAN_HOST] == entry.title 
+            for entry in self._async_current_entries()
+        ):
+            _LOGGER.info("host {} has already been configured".format(disco_info[BARNEYMAN_HOST]))
+            return self.async_abort(reason="already_configured")
+
+
+        self.zeroconf_info={
+            BARNEYMAN_HOST: disco_info[BARNEYMAN_HOST],
+        }
+
+        return await self.async_step_parseuser(self.zeroconf_info)
+
+        
+
+
+
 
 
 # can't get this called!!

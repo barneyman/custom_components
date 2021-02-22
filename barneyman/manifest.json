@@ -2,10 +2,13 @@
   "domain": "barneyman",
   "name": "barneyman's Home Automation Devices",
 
-  "config_flow": true,
-  "zeroconf": ["_barneyman._tcp.local.", "_coap._udp.local."],
+  "logo": "https://home-assistant.io/images/cast/splash.png",
+  "icon": "https://home-assistant.io/images/cast/splash.png",
 
-  "documentation": "https://github.com/home-assistant/example-custom-config/tree/master/custom_components/example_sensor/",
+  "config_flow": true,
+  "zeroconf": ["_barneyman._tcp.local."],
+
+  "documentation": "https://github.com/barneyman/custom_components",
   "dependencies": [],
   "codeowners": [],
   "requirements": []

@@ -1,16 +1,11 @@
-BEACH_HEAD = "beachhead"
+BARNEYMAN_HOST = "host"
+BARNEYMAN_HOSTNAME = "hostname"
 
-DISCOVERY_ROOT = "discovery"
+DEVICES_LIGHT = "light"
+DEVICES_SENSOR = "sensor"
+DEVICES_CAMERA = "camera"
 
-DEVICES_ADDED = "devicesAdded"
+LISTENING_PORT = "listeningport"
 
-DEVICES_FOUND = "found"
-DEVICES_FOUND_UNQUALIFIED = "unqualified"
-DEVICES_FOUND_LIGHT = "light"
-DEVICES_FOUND_SENSOR = "sensor"
-DEVICES_FOUND_CAMERA = "camera"
-
-LISTENING_PORT = "ListeningPort"
-
-AUTH_TOKEN = "auth"
+AUTH_TOKEN = "authtoken"
 
