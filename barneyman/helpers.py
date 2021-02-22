@@ -153,7 +153,7 @@ class BJFRestData(RestData):
         cacheTimeout=20,
     ):
         RestData.__init__(
-            self, method, resource, auth, headers, data, verify_ssl, httptimeout
+            self, hass, method, resource, auth, headers,None, data, verify_ssl, httptimeout
         )
 
         self._lastUpdate = None
