@@ -70,8 +70,8 @@ CONFIG_SCHEMA = vol.Schema(
                             "hardOff":offSchema,
                             "reset":offSchema,
 
-                            vol.Optional("jitter", default=10):vol.All(
-                                    vol.Coerce(float), vol.Range(min=0, max=20)
+                            vol.Optional("jitter", default=30):vol.All(
+                                    vol.Coerce(float), vol.Range(min=0, max=50)
                                 ),
                             "absent": vol.Schema({
                                 vol.Optional("unlit_scene"): cv.string,
