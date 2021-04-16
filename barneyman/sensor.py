@@ -3,7 +3,7 @@ import json
 import voluptuous as vol
 from datetime import datetime, timedelta
 from homeassistant.helpers.template import Template
-from homeassistant.components.rest.sensor import RestSensor, RestData
+from homeassistant.components.rest.sensor import RestSensor
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import (

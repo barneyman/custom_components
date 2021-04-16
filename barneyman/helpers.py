@@ -1,7 +1,7 @@
 import logging
 import http.client
 import json
-from homeassistant.components.rest.sensor import RestData
+from homeassistant.components.rest.data import RestData
 from datetime import datetime, timedelta
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import threading
