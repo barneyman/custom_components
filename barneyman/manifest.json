@@ -11,5 +11,6 @@
   "documentation": "https://github.com/barneyman/custom_components",
   "dependencies": [],
   "codeowners": [],
-  "requirements": []
+  "requirements": [],
+  "version":"0.0.1"
 }

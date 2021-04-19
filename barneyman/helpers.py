@@ -77,22 +77,28 @@ async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeo
 
     _LOGGER.warning("barneyman async_doQuery to %s", builtUrl)
 
-    async with httpx.AsyncClient() as client:
-        response = await client.request(
-            httpmethod,
-            builtUrl,
-            headers=None,
-            params=None,
-            auth=None,
-            data=jsonBody,
-            timeout=timeout,
-        )
-        if returnJson:
-            _LOGGER.warning("barneyman async_doQuery returned  %s", response.text)
-            return json.loads(response.text)
-        else:
-            return True
+    try:
 
+        async with httpx.AsyncClient() as client:
+            response = await client.request(
+                httpmethod,
+                builtUrl,
+                headers=None,
+                params=None,
+                auth=None,
+                data=jsonBody,
+                timeout=timeout,
+            )
+            if returnJson:
+                _LOGGER.info("barneyman async_doQuery returned  %s", response.text)
+                return json.loads(response.text)
+            else:
+                return True
+
+    except Exception as e:
+        _LOGGER.error("barneyman async_doQuery exception %s %s %s", e, hostname, url)
+
+    return None
 
 
 class BJFDeviceInfo:
@@ -136,7 +142,7 @@ class BJFChildDeviceInfo:
 
 
 # this can be reused by a single sensor
-# when it's async, the logic is a bit more comples
+# when it's async, the logic is a bit more complex
 
 
 class BJFRestData(RestData):

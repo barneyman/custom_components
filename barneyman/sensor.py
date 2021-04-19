@@ -11,7 +11,7 @@ from .barneymanconst import (
     LISTENING_PORT,
     AUTH_TOKEN,
 )
-from .helpers import doQuery, doPost, BJFDeviceInfo, BJFRestData, BJFListener
+from .helpers import doQuery, doPost, BJFDeviceInfo, BJFRestData, BJFListener, async_doQuery
 from typing import Any, Dict, List, Optional
 
 from homeassistant.const import STATE_OFF, STATE_ON
@@ -27,7 +27,8 @@ DOMAIN = "barneyman"
 async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("SENSOR async_setup_entry: %s", config_entry.data)
 
-    await hass.async_add_executor_job(addBJFsensor,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
+    #await hass.async_add_executor_job(addBJFsensor,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
+    await addBJFsensor(config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
 
     return True
 
@@ -36,13 +37,14 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 
 
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 
-
-def addBJFsensor(hostname, add_devices, hass):
+async def addBJFsensor(hostname, add_devices, hass):
     _LOGGER.info("addBJFsensor querying %s", hostname)
 
-    config = doQuery(hostname, "/json/config", True)
+    #config = doQuery(hostname, "/json/config", True)
+    config = await async_doQuery(hostname, "/json/config", True)
 
     if config != None:
 
@@ -53,10 +55,22 @@ def addBJFsensor(hostname, add_devices, hass):
         url = "http://" + config["ip"] + "/json/state"
         rest = BJFRestData(hass,"GET", url, None, None, None)
 
+
         friendlyName = (
             config["friendlyName"] if "friendlyName" in config else config["name"]
         )
 
+
+        # and add a datacoordinator
+        coord = DataUpdateCoordinator(hass,_LOGGER,name=friendlyName+"_DUC", update_method=rest.async_update,update_interval=timedelta(seconds=30))
+
+        await coord.async_config_entry_first_refresh()
+
+        #await hass.async_add_executor_job(coord.async_config_entry_first_refresh)
+
+        # asyncio.run_coroutine_threadsafe(
+        #     coordinator.async_config_entry_first_refresh(), hass.loop
+        #     ).result()
 
         # add a bunch of rest sensors
         if "sensorConfig" in config:
@@ -82,6 +96,7 @@ def addBJFsensor(hostname, add_devices, hass):
 
                         potential = BJFBinarySensor(
                             hass,
+                            coord,
                             element["impl"],
                             mac,
                             hostname,
@@ -121,6 +136,7 @@ def addBJFsensor(hostname, add_devices, hass):
 
                         potential = BJFRestSensor(
                             hass,
+                            coord,
                             mac,
                             hostname,
                             rest,
@@ -152,6 +168,7 @@ class BJFRestSensor(BJFDeviceInfo, RestSensor):
     def __init__(
         self,
         hass,
+        coord,
         mac,
         hostname,
         rest,
@@ -166,7 +183,7 @@ class BJFRestSensor(BJFDeviceInfo, RestSensor):
         _LOGGER.info("Creating sensor.%s", name)
 
         RestSensor.__init__(
-            self, hass, rest, name, unit, deviceType, json, None, True, None, None
+            self, coord, rest, name, unit, deviceType, json, None, True, None, None
         )
         BJFDeviceInfo.__init__(self, config)
 
@@ -186,6 +203,7 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
     def __init__(
         self,
         hass,
+        coord,
         transport,
         mac,
         hostname,
@@ -201,6 +219,7 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
         BJFRestSensor.__init__(
             self,
             hass,
+            coord,
             mac,
             hostname,
             rest,

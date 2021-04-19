@@ -4,5 +4,6 @@
   "documentation": "https://github.com/home-assistant/example-custom-config/tree/master/custom_components/example_sensor/",
   "dependencies": ["device_tracker"],
   "codeowners": [],
-  "requirements": []
+  "requirements": [],
+  "version":"0.0.1"
 }
