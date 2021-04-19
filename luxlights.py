@@ -202,6 +202,7 @@ class luxLightInstance(Entity):
 
         _LOGGER.debug("lastKnownRunState : {}".format(self._lastKnownRunState))
 
+        # distinguish between hardoff and softoff
         if self._lastKnownRunState["state"] == "off":
             return
 
@@ -237,6 +238,12 @@ class luxLightInstance(Entity):
             nextStateValue["state"] = "present"
             meta = self._presentDetail
         else:
+
+            # if presence hasn't changed, and we're softOff, just ignore this (or we'll visit it redundantly, regularly)
+            if self._lastKnownRunState["state"] == "softOff":
+                _LOGGER.debug("softOff already in effect, bailing")
+                return
+
             nextStateValue["state"] = "absent"
             meta = self._absentDetail
 
@@ -307,7 +314,7 @@ class luxLightInstance(Entity):
         else:
             service_data = {"entity_id": self._offScene}
             _LOGGER.info("{} to vacant".format(self._name))
-            lastKnownRunState = {"state": "off", "scene": self._offScene}
+            lastKnownRunState = {"state": "softOff", "scene": self._offScene}
 
             self._hass.services.call("scene", "turn_on", service_data)
             self.saveState(lastKnownRunState)
