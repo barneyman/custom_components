@@ -91,9 +91,13 @@ async def async_remove_entry(hass, entry):
 async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry.data)
 
-    await hass.async_add_executor_job(addBJFlight,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
+    addResult = await hass.async_add_executor_job(addBJFlight,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
 
-    return True
+    if addResult!=True:
+        _LOGGER.error("LIGHT async_setup_entry: %s FAILED", config_entry.entry_id)
+
+
+    return addResult
 
 
 # doesn't appear to be called
@@ -141,7 +145,7 @@ def addBJFlight(hostname, add_devices, hass):
                 return True
 
     else:
-        _LOGGER.error("Failed to query %s at onboarding", hostname)
+        _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
 
     return False
 

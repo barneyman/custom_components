@@ -28,9 +28,12 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("SENSOR async_setup_entry: %s", config_entry.data)
 
     #await hass.async_add_executor_job(addBJFsensor,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
-    await addBJFsensor(config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
+    addResult = await addBJFsensor(config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
 
-    return True
+    if addResult!=True:
+        _LOGGER.error("SENSOR async_setup_entry: %s FAILED", config_entry.entry_id)
+
+    return addResult
 
 
 

@@ -26,9 +26,12 @@ DOMAIN = "barneyman"
 async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("CAMERA async_setup_entry: %s", config_entry.data)
 
-    await hass.async_add_executor_job(addBJFcamera,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
+    addResult = await hass.async_add_executor_job(addBJFcamera,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
 
-    return True
+    if addResult!=True:
+        _LOGGER.error("CAMERA async_setup_entry: %s FAILED", config_entry.entry_id)
+
+    return addResult
 
 
 def addBJFcamera(hostname, add_devices, hass):
