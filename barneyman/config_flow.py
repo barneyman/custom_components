@@ -4,7 +4,7 @@ import logging
 from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers import config_entry_flow
 from .barneymanconst import BARNEYMAN_HOST, BARNEYMAN_HOSTNAME
-from .helpers import doExists
+from .helpers import async_doExists
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -52,7 +52,8 @@ class FlowHandler(config_entries.ConfigFlow):
             title = user_input[BARNEYMAN_HOST]
 
             # check there IS something there!
-            if not doExists(user_input[BARNEYMAN_HOST]):
+            check = await async_doExists(user_input[BARNEYMAN_HOST])
+            if not check:
                 _LOGGER.warning("%s beachhead does not exist", user_input[BARNEYMAN_HOST])
                 return self.async_abort(reason="nexist")
 

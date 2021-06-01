@@ -35,6 +35,20 @@ def doExists(hostname):
     return True
 
 
+async def async_doExists(hostname):
+    jsonRet = await async_doQuery(hostname, "/json/config", True, timeout=2)
+
+    _LOGGER.info("doExists %s ", hostname)
+
+    if jsonRet is None:
+        return False
+
+    if "version" not in jsonRet:
+        return False
+
+    return True
+
+
 def doQuery(
     hostname, url, returnJson=False, httpmethod="GET", timeout=10, jsonBody=None
 ):
