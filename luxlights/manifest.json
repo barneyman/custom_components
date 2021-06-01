@@ -2,7 +2,7 @@
     "domain": "luxlights",
     "name": "Barney's lux tracking and actions",
     "documentation": "https://github.com/home-assistant/example-custom-config/tree/master/custom_components/example_sensor/",
-    "dependencies": ["device_tracker"],
+    "dependencies": ["device_tracker", "barneyman"],
     "codeowners": [],
     "requirements": [],
     "version":"0.0.1"
