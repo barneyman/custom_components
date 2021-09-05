@@ -14,7 +14,7 @@ from .barneymanconst import (
     AUTH_TOKEN
 
 )
-from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost
+from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost, async_doQuery
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -91,11 +91,10 @@ async def async_remove_entry(hass, entry):
 async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry.data)
 
-    addResult = await hass.async_add_executor_job(addBJFlight,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
+    addResult = await addBJFlight(config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
 
     if addResult!=True:
         _LOGGER.error("LIGHT async_setup_entry: %s FAILED", config_entry.entry_id)
-
 
     return addResult
 
@@ -108,11 +107,11 @@ async def async_setup(hass, config_entry):
 
 
 # TODO - find all the lights, and inc the ordinal
-def addBJFlight(hostname, add_devices, hass):
+async def addBJFlight(hostname, add_devices, hass):
     # first - query the light
     _LOGGER.info("querying %s", hostname)
 
-    config = doQuery(hostname, "/json/config", True)
+    config = await async_doQuery(hostname, "/json/config", True)
 
     if config != None:
 

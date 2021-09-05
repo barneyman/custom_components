@@ -84,7 +84,7 @@ async def async_doPost(
     return async_doQuery(hostname, url, returnJson, httpmethod, timeout, jsonBody)
 
 
-async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeout=10, jsonBody=None):
+async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeout=30, jsonBody=None):
 #     """Get the latest data from REST service with provided method."""
 
     builtUrl="http://"+hostname+url
@@ -110,7 +110,7 @@ async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeo
                 return True
 
     except Exception as e:
-        _LOGGER.error("barneyman async_doQuery exception %s %s %s", e, hostname, url)
+        _LOGGER.error("barneyman async_doQuery exception '%s' host '%s' url '%s'", str(e), hostname, url)
 
     return None
 
