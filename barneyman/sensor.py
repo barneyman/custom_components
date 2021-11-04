@@ -186,7 +186,7 @@ class BJFRestSensor(BJFDeviceInfo, RestSensor):
         _LOGGER.info("Creating sensor.%s", name)
 
         RestSensor.__init__(
-            self, coord, rest, name, unit, deviceType, json, None, True, None, None
+            self, coord, rest, name, unit, deviceType, json, None, True, None, None, None
         )
         BJFDeviceInfo.__init__(self, config)
 
