@@ -178,15 +178,31 @@ class BJFRestSensor(BJFDeviceInfo, RestSensor):
         name,
         deviceType,
         unit,
-        json,
+        jsonSensorQuery,
         ordinal,
         element,
         config,
     ):
         _LOGGER.info("Creating sensor.%s", name)
 
+# self,
+#         coordinator,
+#         rest,
+#         name,
+#         unit_of_measurement,
+#         device_class,
+#         state_class,
+#         value_template,
+#         json_attrs,
+#         force_update,
+#         resource_template,
+#         json_attrs_path,
+
         RestSensor.__init__(
-            self, coord, rest, name, unit, deviceType, json, None, True, None, None, None
+            # sensorclass 
+            self, coord, rest, name, unit, deviceType, 
+                "measurement", 
+                value_template=jsonSensorQuery, json_attrs=None, force_update=True, resource_template=None, json_attrs_path=None
         )
         BJFDeviceInfo.__init__(self, config)
 
