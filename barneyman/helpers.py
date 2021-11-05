@@ -89,7 +89,7 @@ async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeo
 
     builtUrl="http://"+hostname+url
 
-    _LOGGER.warning("barneyman async_doQuery to %s", builtUrl)
+    #_LOGGER.warning("barneyman async_doQuery to %s", builtUrl)
 
     try:
 

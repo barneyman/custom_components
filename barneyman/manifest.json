@@ -9,7 +9,7 @@
   "zeroconf": ["_barneyman._tcp.local."],
 
   "documentation": "https://github.com/barneyman/custom_components",
-  "dependencies": ["http", "zeroconf"],
+  "dependencies": ["http", "zeroconf", "network"],
   "codeowners": [],
   "requirements": [],
   "version":"0.0.1"
