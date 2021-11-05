@@ -58,7 +58,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
         _LOGGER.debug("Setting up barneyman via discovery ... %s", configToUse)
 
-        devices = [configToUse["host"]]
+        devices = [configToUse[BARNEYMAN_HOST]]
 
     else:
         configToUse = config
@@ -77,9 +77,8 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
     def device_discovered(service, info):
         """ Called when a bjflights device has been discovered. """
-        _LOGGER.debug("MDNS Discovered a new %s device: %s", service, info["host"])
-        # load_platform(hass, 'light', DOMAIN, { "devices":[info["host"]]} )
-        addBJFlight(info["host"], add_devices, hass)
+        _LOGGER.debug("MDNS Discovered a new %s device: %s", service, info[BARNEYMAN_HOST])
+        addBJFlight(info[BARNEYMAN_HOST], add_devices, hass)
 
 
 async def async_remove_entry(hass, entry):
