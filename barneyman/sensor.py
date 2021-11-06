@@ -11,6 +11,9 @@ from .barneymanconst import (
     LISTENING_PORT,
     AUTH_TOKEN,
 )
+
+from homeassistant.core import callback
+
 from .helpers import doQuery, doPost, BJFDeviceInfo, BJFRestData, BJFListener, async_doQuery
 from typing import Any, Dict, List, Optional
 
@@ -263,7 +266,7 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
 
         # and subscribe for data updates
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.parseData)
+            self.coordinator.async_add_listener(self.async_parseData)
         )        
 
         self._is_on = None
@@ -292,11 +295,11 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
         """Return the class of this device, from component DEVICE_CLASSES."""
         return self._deviceClass
 
-
-    async def parseData(self):
+    @callback
+    def async_parseData(self):
         # subscribe
         _LOGGER.info("doing binarysensor async_update")
-        await self.async_subscribe("sensor")
+        self.hass.async_run_job(self.async_subscribe("sensor"))
         # work out my on state (._state is provided by the restsensor)
         self._is_on=self._state
                         

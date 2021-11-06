@@ -16,6 +16,10 @@ from .barneymanconst import (
 )
 from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost, async_doQuery
 
+
+from homeassistant.core import callback
+
+
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP,
@@ -177,15 +181,19 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
         # and subscribe for data updates
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.parseData)
+            coord.async_add_listener(self.async_parseData)
         )        
 
+
     def HandleIncomingPacket(self, data):
+
+        _LOGGER.warning("Publish from {}",self._hostname)
+
         payload = json.loads(data.decode("utf-8"))
 
         _LOGGER.debug(payload)
         self._is_on = payload["state"]
-        _LOGGER.debug("About to set %s state to %s", self.entity_id, self.state)
+        _LOGGER.warning("About to set %s state to %s", self.entity_id, self.state)
         self._hass.states.set(self.entity_id, self.state)
 
 
@@ -216,6 +224,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
         doPost(self._hostname, "/button?action=on&port=" + str(self._ordinal))
         self._rest.resetCache()
+        self.coordinator.async_refresh()
 
     def turn_off(self, **kwargs):
         """Instruct the light to turn off."""
@@ -223,6 +232,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
         doPost(self._hostname, "/button?action=off&port=" + str(self._ordinal))
         # and reset the cache
         self._rest.resetCache()
+        self.coordinator.async_refresh()
 
 
     
@@ -233,10 +243,12 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
 
 
+    @callback
+    def async_parseData(self):
 
-    async def parseData(self):
+        _LOGGER.info("light {} async_parseData ha been called!".format(self._hostname))
 
-        await self.async_subscribe("light")
+        self.hass.async_run_job(self.async_subscribe("light"))
 
         if self._rest.data is None:
             _LOGGER.error("no rest data from %s", self._name)
