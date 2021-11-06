@@ -104,6 +104,8 @@ async def async_setup(hass, config_entry):
 
     # lets hunt for our items
 
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
+
 
 # TODO - find all the lights, and inc the ordinal
 async def addBJFlight(hostname, add_devices, hass):
@@ -120,6 +122,12 @@ async def addBJFlight(hostname, add_devices, hass):
         url = "http://" + config["ip"] + "/json/state"
         rest = BJFRestData(hass, "GET", url, None, None, None, httptimeout=10)
 
+        # and add a datacoordinator
+        coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_update,update_interval=timedelta(seconds=30))
+
+        await coord.async_config_entry_first_refresh()
+
+
         if "switchConfig" in config:
             for switchConfig in config["switchConfig"]:
 
@@ -129,7 +137,7 @@ async def addBJFlight(hostname, add_devices, hass):
                     transport = switchConfig["impl"]
 
                 potential = bjfESPLight(
-                    hostname, mac, config, switchConfig["switch"], rest, transport, hass
+                    hostname,coord, mac, config, switchConfig["switch"], rest, transport, hass
                 )
 
                 # does this already exist?
@@ -148,10 +156,11 @@ async def addBJFlight(hostname, add_devices, hass):
     return False
 
 
-class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):
-    def __init__(self, hostname, mac, config, ordinal, rest, transport, hass):
+class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
+    def __init__(self, hostname, coord, mac, config, ordinal, rest, transport, hass):
         BJFDeviceInfo.__init__(self, config)
         BJFListener.__init__(self, transport, hass)
+        CoordinatorEntity.__init__(self,coord)
 
         self._config = config
 
@@ -166,10 +175,10 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):
         self._rest = rest
         self._hass = hass
 
-        # and get my state
-        self.base_update()
-
-    #        self._brightness = None
+        # and subscribe for data updates
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.parseData)
+        )        
 
     def HandleIncomingPacket(self, data):
         payload = json.loads(data.decode("utf-8"))
@@ -215,47 +224,22 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):
         # and reset the cache
         self._rest.resetCache()
 
-    def update(self):
-        """Fetch new state data for this light.
-        This is the only method that should fetch new data for Home Assistant.
-        """
 
-        self.subscribe("light")
-
-        _LOGGER.info("doing light update")
-
-        self.base_update()
+    
 
 
-    async def async_update(self):
-        """Fetch new state data for this light.
-        This is the only method that should fetch new data for Home Assistant.
-        """
+
+
+
+
+
+
+    async def parseData(self):
 
         await self.async_subscribe("light")
 
-        _LOGGER.info("doing light async_update")
-
-        await self.async_base_update()
-
-
-    def base_update(self):
-
-        self._rest.update()
-
-        return self.parseData()
-
-    async def async_base_update(self):
-
-        await self._rest.async_update()
-
-        return self.parseData()
-
-
-    def parseData(self):
-
         if self._rest.data is None:
-            _LOGGER.error("no rest data from %s", self._unique_id)
+            _LOGGER.error("no rest data from %s", self._name)
             return None
 
         jsonData = json.loads(self._rest.data)

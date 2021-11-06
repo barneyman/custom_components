@@ -40,7 +40,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 
 
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
 
 
 async def addBJFsensor(hostname, add_devices, hass):
@@ -167,7 +167,7 @@ async def addBJFsensor(hostname, add_devices, hass):
 
 
 # in py, vtable priority is left to right
-class BJFRestSensor(BJFDeviceInfo, RestSensor):
+class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
     def __init__(
         self,
         hass,
@@ -197,6 +197,8 @@ class BJFRestSensor(BJFDeviceInfo, RestSensor):
 #         force_update,
 #         resource_template,
 #         json_attrs_path,
+
+        CoordinatorEntity.__init__(self,coord)
 
         RestSensor.__init__(
             # sensorclass 
@@ -259,6 +261,11 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
         self._hostname = hostname
         self._deviceClass = deviceType
 
+        # and subscribe for data updates
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.parseData)
+        )        
+
         self._is_on = None
 
     # sent from an announcer
@@ -285,19 +292,11 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
         """Return the class of this device, from component DEVICE_CLASSES."""
         return self._deviceClass
 
-    def update(self):
-        # subscribe
-        _LOGGER.info("doing binarysensor update")
-        self.subscribe("sensor")
-        # call base
-        return RestSensor.update(self)
 
-    async def async_update(self):
+    async def parseData(self):
         # subscribe
         _LOGGER.info("doing binarysensor async_update")
         await self.async_subscribe("sensor")
-        # call base
-        await RestSensor.async_update(self)
         # work out my on state (._state is provided by the restsensor)
         self._is_on=self._state
                         
