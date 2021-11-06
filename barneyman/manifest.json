@@ -1,6 +1,6 @@
 {
   "domain": "barneyman",
-  "name": "barneyman's Home Automation Devices",
+  "name": "barneyman's Devices",
 
   "logo": "https://home-assistant.io/images/cast/splash.png",
   "icon": "https://home-assistant.io/images/cast/splash.png",
@@ -12,5 +12,7 @@
   "dependencies": ["http", "zeroconf", "network"],
   "codeowners": [],
   "requirements": [],
-  "version":"0.0.1"
+  "version":"0.0.1",
+
+  "iot_class": "local_polling"  
 }
