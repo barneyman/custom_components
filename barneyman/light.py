@@ -245,65 +245,12 @@ class bjfESPLight(BJFDeviceInfo, BJFListener, LightEntity):
 
         return self.parseData()
 
-        # if self._rest.data is None:
-        #     _LOGGER.error("no rest data from %s", self._unique_id)
-        #     return None
-
-        # jsonData = json.loads(self._rest.data)
-
-        # _LOGGER.info(jsonData)
-
-        # if jsonData is not None:
-
-        #     try:
-
-        #         self._name = (
-        #             jsonData["friendlyName"]
-        #             if "friendlyName" in jsonData
-        #             else jsonData["name"]
-        #         )
-
-        #         currentState = jsonData["switchState"][self._ordinal]["state"]
-        #         self._state = True if currentState == 1 else False
-
-        #     except Exception as e:
-        #         _LOGGER.error("Exception in light.base_update %s", e)
-
-        # return jsonData
-
-
-
     async def async_base_update(self):
 
         await self._rest.async_update()
 
         return self.parseData()
 
-        # if self._rest.data is None:
-        #     _LOGGER.error("no rest data from %s", self._unique_id)
-        #     return None
-
-        # jsonData = json.loads(self._rest.data)
-
-        # _LOGGER.info(jsonData)
-
-        # if jsonData is not None:
-
-        #     try:
-
-        #         self._name = (
-        #             jsonData["friendlyName"]
-        #             if "friendlyName" in jsonData
-        #             else jsonData["name"]
-        #         )
-
-        #         currentState = jsonData["switchState"][self._ordinal]["state"]
-        #         self._state = True if currentState == 1 else False
-
-        #     except Exception as e:
-        #         _LOGGER.error("Exception in light.base_update %s", e)
-
-        # return jsonData
 
     def parseData(self):
 
