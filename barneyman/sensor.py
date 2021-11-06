@@ -211,6 +211,12 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
         )
         BJFDeviceInfo.__init__(self, config)
 
+        # and subscribe for data updates
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_alertHA)
+        )        
+
+
         self._unique_id = mac + "_sensor_" + str(ordinal) + "_" + element
         self._hostname = hostname
         self._mac = mac
@@ -219,6 +225,12 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
     def unique_id(self):
         """Return unique ID for sensor."""
         return self._unique_id
+
+    @callback
+    def async_alertHA(self):
+        self._update_from_rest_data()
+
+
 
 
 
@@ -299,7 +311,6 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
     def async_parseData(self):
         # subscribe
         _LOGGER.info("doing binarysensor async_update")
-        self.hass.async_run_job(self.async_subscribe("sensor"))
         # work out my on state (._state is provided by the restsensor)
         self._is_on=self._state
                         
