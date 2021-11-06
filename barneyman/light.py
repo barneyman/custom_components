@@ -1,7 +1,7 @@
 import logging
 import json
 import voluptuous as vol
-
+import asyncio
 # Import the device class from the component that you want to support
 
 from datetime import datetime, timedelta
@@ -224,7 +224,10 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
         doPost(self._hostname, "/button?action=on&port=" + str(self._ordinal))
         self._rest.resetCache()
-        self.coordinator.async_refresh()
+        asyncio.run_coroutine_threadsafe(
+            self.coordinator.async_refresh(), self.hass.loop
+            ).result()
+        
 
     def turn_off(self, **kwargs):
         """Instruct the light to turn off."""
@@ -232,7 +235,9 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
         doPost(self._hostname, "/button?action=off&port=" + str(self._ordinal))
         # and reset the cache
         self._rest.resetCache()
-        self.coordinator.async_refresh()
+        asyncio.run_coroutine_threadsafe(
+            self.coordinator.async_refresh(), self.hass.loop
+            ).result()
 
 
     
