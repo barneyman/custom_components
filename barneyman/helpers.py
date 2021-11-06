@@ -129,6 +129,7 @@ class BJFDeviceInfo:
             "name": self._config["name"],
             "manufacturer": "barneyman",
             "sw_version": self._config["version"],
+            "configuration_url": "http://"+self._config["ip"]
         }
 
 
@@ -203,21 +204,24 @@ class BJFRestData(RestData):
 
     async def async_update(self):
 
-        doAnUpdate=False
+        doAnUpdate=True
 
-        if self._lastUpdate is None or self.data is None:
-            _LOGGER.debug("BJFRestData - first update")
-            doAnUpdate=True
-        else:
-            now = datetime.now()
-            if (now - self._lastUpdate).total_seconds() > self._cacheTimeout:
-                _LOGGER.debug(
-                    "BJFRestData - data is stale %d secs",
-                    (now - self._lastUpdate).total_seconds(),
-                )
+        if self._cacheTimeout!=0:
+            doAnUpdate=False
+
+            if self._lastUpdate is None or self.data is None:
+                _LOGGER.debug("BJFRestData - first update")
                 doAnUpdate=True
             else:
-                _LOGGER.debug("BJFRestData - cache hit")
+                now = datetime.now()
+                if (now - self._lastUpdate).total_seconds() > self._cacheTimeout:
+                    _LOGGER.debug(
+                        "BJFRestData - data is stale %d secs",
+                        (now - self._lastUpdate).total_seconds(),
+                    )
+                    doAnUpdate=True
+                else:
+                    _LOGGER.debug("BJFRestData - cache hit")
 
         if doAnUpdate:
 
