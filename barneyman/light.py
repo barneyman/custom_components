@@ -124,7 +124,7 @@ async def addBJFlight(hostname, add_devices, hass):
         mac = config["mac"]
 
         url = "http://" + config["ip"] + "/json/state"
-        rest = BJFRestData(hass, "GET", url, None, None, None, httptimeout=10)
+        rest = BJFRestData(hass, "GET", url, None, None, None, httptimeout=10, cacheTimeout=0)
 
         # and add a datacoordinator
         coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_update,update_interval=timedelta(seconds=30))
