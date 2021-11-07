@@ -119,6 +119,7 @@ class BJFDeviceInfo:
     def __init__(self, config):
         self._config = config
 
+    # https://developers.home-assistant.io/docs/device_registry_index/
     @property
     def device_info(self):
         return {
@@ -127,8 +128,9 @@ class BJFDeviceInfo:
                 (CONNECTION_NETWORK_MAC, self._mac)
             },
             "name": self._config["name"],
+            "model": self._config["version"].split('|')[0],
             "manufacturer": "barneyman",
-            "sw_version": self._config["version"],
+            "sw_version": self._config["version"].split('|')[1],
             "configuration_url": "http://"+self._config["ip"]
         }
 
@@ -138,6 +140,7 @@ class BJFChildDeviceInfo:
         self._config = config
         self._parent=parent.device_info["identifiers"]
 
+    # https://developers.home-assistant.io/docs/device_registry_index/
     @property
     def device_info(self):
         return {
@@ -147,7 +150,8 @@ class BJFChildDeviceInfo:
             },
             "name": self._config["name"],
             "manufacturer": "barneyman",
-            "sw_version": self._config["version"],
+            "model": self._config["version"].split('|')[0],
+            "sw_version": self._config["version"].split('|')[1],
             "via_device": self._parent
         }
 
