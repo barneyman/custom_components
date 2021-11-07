@@ -1,0 +1,6 @@
+[submodule "HAassets/wheels-custom-integrations"]
+	path = HAassets/wheels-custom-integrations
+	url = https://github.com/barneyman/wheels-custom-integrations.git
+[submodule "HAassets/brands"]
+	path = HAassets/brands
+	url = https://github.com/barneyman/brands.git
