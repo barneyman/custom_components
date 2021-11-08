@@ -62,12 +62,9 @@ async def async_setup_entry(hass, entry):
     if AUTH_TOKEN in entry.data:
         hass.data[DOMAIN][AUTH_TOKEN] = entry.data[AUTH_TOKEN]
 
-    # then forward this to all the component
-    for component in [DEVICES_LIGHT, DEVICES_SENSOR, DEVICES_CAMERA]:
-        _LOGGER.info("barneyman async_setup_entry forwarding to %s", component)
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, component)
-        )
+    # then forward this to all the platforms
+    hass.config_entries.async_setup_platforms(entry, [DEVICES_LIGHT, DEVICES_SENSOR, DEVICES_CAMERA])
+
 
     return True
 
