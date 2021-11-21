@@ -98,7 +98,8 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     if config_entry.title != BARNEYMAN_CONFIG_ENTRY:
 
-        _LOGGER.error("Old config entry - ignoring {}".format(config_entry.title))
+        _LOGGER.error("Old config entry - removing {}".format(config_entry.title))
+        hass.config_entries.async_remove(config_entry)
         return False
 
 
