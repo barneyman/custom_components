@@ -98,14 +98,14 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     if config_entry.title != BARNEYMAN_CONFIG_ENTRY:
 
-        _LOGGER.error("Old config entry - ignoring {}", config_entry.title)
+        _LOGGER.error("Old config entry - ignoring {}".format(config_entry.title))
         return False
 
 
     async def async_update_options(hass, entry) -> None:
 
         # reload me
-        async_scan_for(entry)
+        await async_scan_for(entry)
 
         """Update options."""
         await hass.config_entries.async_reload(entry.entry_id)
@@ -124,7 +124,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     config_entry.add_update_listener(async_update_options)
 
     # scan for lights
-    addResult = async_scan_for(config_entry)
+    addResult = await async_scan_for(config_entry)
 
     return addResult
 

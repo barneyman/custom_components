@@ -36,19 +36,21 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     if config_entry.title != BARNEYMAN_CONFIG_ENTRY:
 
-        _LOGGER.error("Old config entry - ignoring {}", config_entry.title)
+        _LOGGER.error("Old config entry - ignoring {}".format(config_entry.title))
         return False
 
     async def async_update_options(hass, entry) -> None:
 
+        _LOGGER.debug("async_update_options {}".format(entry.title))
         # reload me
-        async_scan_for(config_entry)
+        await async_scan_for(config_entry)
 
         """Update options."""
         await hass.config_entries.async_reload(entry.entry_id)
 
     async def async_scan_for(config_entry):
 
+        _LOGGER.debug("async_scan_for addBJFsensor {}".format(config_entry.data))
         addResult = await addBJFsensor(config_entry.data, async_add_devices, hass)
 
         if addResult!=True:
@@ -57,10 +59,12 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         return addResult
 
     # add a listener to the config entry
+    _LOGGER.debug("adding listener for {}".format(config_entry.title))
     config_entry.add_update_listener(async_update_options)
 
     # scan for lights
-    addResult = async_scan_for(config_entry)
+    _LOGGER.debug("first scan {}".format(config_entry.title))
+    addResult = await async_scan_for(config_entry)
 
 
     #await hass.async_add_executor_job(addBJFsensor,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
@@ -76,14 +80,16 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Coor
 
 
 async def addBJFsensor(data, add_devices, hass):
-    _LOGGER.info("addBJFsensor querying %s", hostname)
 
     sensorsToAdd = []
 
     for hostname in data[BARNEYMAN_DEVICES]:
 
         if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
+            _LOGGER.info("device {} has already been added".format(hostname))
             continue
+
+        _LOGGER.info("addBJFsensor querying %s", hostname)
 
         #config = doQuery(hostname, "/json/config", True)
         config = await async_doQuery(hostname, "/json/config", True)

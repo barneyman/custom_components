@@ -65,6 +65,7 @@ async def async_setup_entry(hass, entry):
         hass.data[DOMAIN][AUTH_TOKEN] = entry.data[AUTH_TOKEN]
 
     # then forward this to all the platforms
+    _LOGGER.info("forwarding to platforms %s %s", entry.title, entry.data)
     hass.config_entries.async_setup_platforms(entry, [DEVICES_LIGHT, DEVICES_SENSOR, DEVICES_CAMERA])
 
 
