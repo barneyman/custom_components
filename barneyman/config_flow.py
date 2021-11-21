@@ -3,7 +3,7 @@ import voluptuous as vol
 import logging
 from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers import config_entry_flow
-from .barneymanconst import BARNEYMAN_HOST, BARNEYMAN_HOSTNAME
+from .barneymanconst import BARNEYMAN_HOST, BARNEYMAN_CONFIG_ENTRY, BARNEYMAN_DEVICES
 from .helpers import async_doExists
 
 
@@ -47,23 +47,10 @@ class FlowHandler(config_entries.ConfigFlow):
 
     async def async_step_parseuser(self, user_input):
 
-        if BARNEYMAN_HOST in user_input:
-            _LOGGER.info("Looking for beachhead")
-            title = user_input[BARNEYMAN_HOST]
+        title = BARNEYMAN_CONFIG_ENTRY
 
-            # check there IS something there!
-            check = await async_doExists(user_input[BARNEYMAN_HOST])
-            if not check:
-                _LOGGER.warning("%s beachhead does not exist", user_input[BARNEYMAN_HOST])
-                return self.async_abort(reason="nexist")
+        return self.async_create_entry(title=title, data=user_input)
 
-            return self.async_create_entry(title=title, data=user_input)
-
-        else:
-            title = "mdns Discovery"
-            _LOGGER.info("Looking for mdns")
-
-        return self.async_abort(reason="no_host")
 
 
     # don't know when this is called
@@ -75,31 +62,44 @@ class FlowHandler(config_entries.ConfigFlow):
     async def async_step_zeroconf(self, disco_info):
         """Handle zeroconf discovery."""
 
-        _LOGGER.debug("barneyman async_step_zeroconf called : {}".format(disco_info))
+        _LOGGER.warning("barneyman async_step_zeroconf called : {}".format(disco_info))
 
         if disco_info is None:
             return self.async_abort(reason="cannot_connect")
 
-        # check we're not already doing this
-        if any(
-            disco_info[BARNEYMAN_HOST] == flow["context"].get(BARNEYMAN_HOST)
-            for flow in self._async_in_progress()
-        ):
-            _LOGGER.info("host {} is already being configured".format(disco_info[BARNEYMAN_HOST]))
-            return self.async_abort(reason="already_in_progress")
+        # TODO fix this check
+        # check we're not already doing this in a configflow
+        # if any(
+        #     BARNEYMAN_CONFIG_ENTRY == flow["context"].get(BARNEYMAN_HOST)
+        #     for flow in self._async_in_progress()
+        # ):
+        #     _LOGGER.info("host {} is already being configured".format(disco_info[BARNEYMAN_HOST]))
+        #     return self.async_abort(reason="already_in_progress")
 
-        # and check we haven't already seen this
+        # and check we haven't already seen this host
         _LOGGER.debug("_async_current_entries called : {}".format(self._async_current_entries()))
-        if any(
-            disco_info[BARNEYMAN_HOST] == entry.title 
-            for entry in self._async_current_entries()
-        ):
-            _LOGGER.info("host {} has already been configured".format(disco_info[BARNEYMAN_HOST]))
-            return self.async_abort(reason="already_configured")
+        for entry in self._async_current_entries():
+            if BARNEYMAN_CONFIG_ENTRY == entry.title:
+                # it's already there - have we seen this host before?
+                if not any(
+                    disco_info[BARNEYMAN_HOST] == host 
+                    for host in entry.data[BARNEYMAN_DEVICES]
+                ):
+                    # add it to the list
+                    newdata=entry.data[BARNEYMAN_DEVICES]
+                    newdata.append(disco_info[BARNEYMAN_HOST])
+                    _LOGGER.info("updating config entry {}".format(entry.title))
+                    _LOGGER.debug("debug: {}".format(entry))
+                    self.hass.config_entries.async_update_entry(entry, data={ BARNEYMAN_DEVICES : newdata } )
+                else:
+                    _LOGGER.info("host {} has already been added".format(disco_info[BARNEYMAN_HOST]))
+                    
+                return self.async_abort(reason="already_configured")
 
 
+        # lets add our config entry, with our first item in the list
         self.zeroconf_info={
-            BARNEYMAN_HOST: disco_info[BARNEYMAN_HOST],
+            BARNEYMAN_DEVICES: [ disco_info[BARNEYMAN_HOST] ],
         }
 
         return await self.async_step_parseuser(self.zeroconf_info)

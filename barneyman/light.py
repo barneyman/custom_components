@@ -11,8 +11,10 @@ import homeassistant.util.color as color_util
 from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import (
     BARNEYMAN_HOST,
-    AUTH_TOKEN
-
+    AUTH_TOKEN,
+    BARNEYMAN_DEVICES,
+    BARNEYMAN_DEVICES_SEEN,
+    BARNEYMAN_CONFIG_ENTRY
 )
 from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost, async_doQuery
 
@@ -94,12 +96,40 @@ async def async_remove_entry(hass, entry):
 async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry.data)
 
-    addResult = await addBJFlight(config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
+    if config_entry.title != BARNEYMAN_CONFIG_ENTRY:
 
-    if addResult!=True:
-        _LOGGER.error("LIGHT async_setup_entry: %s FAILED", config_entry.entry_id)
+        _LOGGER.error("Old config entry - ignoring {}", config_entry.title)
+        return False
+
+
+    async def async_update_options(hass, entry) -> None:
+
+        # reload me
+        async_scan_for(entry)
+
+        """Update options."""
+        await hass.config_entries.async_reload(entry.entry_id)
+
+    async def async_scan_for(config_entry):
+
+        addResult = await addBJFlight(config_entry.data, async_add_devices, hass)
+
+        if addResult!=True:
+            _LOGGER.error("LIGHT async_setup_entry: %s FAILED", config_entry.entry_id)
+
+        return addResult
+
+
+    # add a listener to the config entry
+    config_entry.add_update_listener(async_update_options)
+
+    # scan for lights
+    addResult = async_scan_for(config_entry)
 
     return addResult
+
+
+
 
 
 # doesn't appear to be called
@@ -112,50 +142,61 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Coor
 
 
 # TODO - find all the lights, and inc the ordinal
-async def addBJFlight(hostname, add_devices, hass):
-    # first - query the light
-    _LOGGER.info("querying %s", hostname)
+async def addBJFlight(data, add_devices, hass):
 
-    config = await async_doQuery(hostname, "/json/config", True)
+    potentials = []
 
-    if config != None:
+    for hostname in data[BARNEYMAN_DEVICES]:
 
-        potentials = []
-        mac = config["mac"]
+        if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
+            continue
 
-        url = "http://" + config["ip"] + "/json/state"
-        rest = BJFRestData(hass, "GET", url, None, None, None, httptimeout=10, cacheTimeout=0)
+        # first - query the light
+        _LOGGER.info("querying %s", hostname)
 
-        # and add a datacoordinator
-        coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_update,update_interval=timedelta(seconds=30))
+        config = await async_doQuery(hostname, "/json/config", True)
 
-        await coord.async_config_entry_first_refresh()
+        if config != None:
+
+            mac = config["mac"]
+
+            url = "http://" + config["ip"] + "/json/state"
+            rest = BJFRestData(hass, "GET", url, None, None, None, httptimeout=10, cacheTimeout=0)
+
+            # and add a datacoordinator
+            coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_update,update_interval=timedelta(seconds=30))
+
+            await coord.async_config_entry_first_refresh()
 
 
-        if "switchConfig" in config:
-            for switchConfig in config["switchConfig"]:
+            if "switchConfig" in config:
+                for switchConfig in config["switchConfig"]:
 
-                # switch may have the ability to prod us
-                transport = None
-                if "impl" in switchConfig:
-                    transport = switchConfig["impl"]
+                    # switch may have the ability to prod us
+                    transport = None
+                    if "impl" in switchConfig:
+                        transport = switchConfig["impl"]
 
-                potential = bjfESPLight(
-                    hostname,coord, mac, config, switchConfig["switch"], rest, transport, hass
-                )
+                    potential = bjfESPLight(
+                        hostname,coord, mac, config, switchConfig["switch"], rest, transport, hass
+                    )
 
-                # does this already exist?
+                    # does this already exist?
 
-                _LOGGER.info("adding light %s", potential.unique_id)
-                potentials.append(potential)
+                    _LOGGER.info("adding light %s", potential.unique_id)
+                    potentials.append(potential)
 
-            if add_devices is not None:
-                add_devices(potentials)
+                    hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN].append(hostname)
 
-                return True
+        else:
+            _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
 
-    else:
-        _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
+
+    if add_devices is not None:
+        add_devices(potentials)
+
+        return True
+
 
     return False
 

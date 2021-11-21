@@ -13,6 +13,7 @@ from .barneymanconst import (
     DEVICES_CAMERA,
     LISTENING_PORT,
     AUTH_TOKEN,
+    BARNEYMAN_DEVICES_SEEN
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ async def async_setup(hass, baseConfig):
     hass.data[DOMAIN] = {
         AUTH_TOKEN: myAuthToken,
         LISTENING_PORT: listeningPort,
+        BARNEYMAN_DEVICES_SEEN: []
     }
 
 
