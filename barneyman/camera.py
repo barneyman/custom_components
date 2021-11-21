@@ -19,7 +19,7 @@ from .barneymanconst import (
     BARNEYMAN_CONFIG_ENTRY
 
 )
-from .helpers import doQuery, doPost, BJFDeviceInfo, BJFListener
+from .helpers import async_doQuery, doQuery, doPost, BJFDeviceInfo, BJFListener
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     return addResult
 
 
-def addBJFcamera(data, add_devices, hass):
+async def addBJFcamera(data, add_devices, hass):
     _LOGGER.info("addBJFcamera querying %s", data)
 
     camerasToAdd = []
@@ -77,7 +77,7 @@ def addBJFcamera(data, add_devices, hass):
             continue
 
 
-        config = doQuery(hostname, "/json/config", True)
+        config = await async_doQuery(hostname, "/json/config", True)
 
         if config != None:
 
