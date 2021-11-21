@@ -49,7 +49,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         addResult = await addBJFcamera(config_entry.data, async_add_devices, hass)
 
         if addResult!=True:
-            _LOGGER.error("SENSOR async_setup_entry: %s FAILED", config_entry.entry_id)
+            _LOGGER.error("CAMERA async_setup_entry: %s FAILED", config_entry.entry_id)
 
         return addResult
 
