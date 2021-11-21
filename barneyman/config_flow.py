@@ -90,10 +90,15 @@ class FlowHandler(config_entries.ConfigFlow):
                     newdata.append(disco_info[BARNEYMAN_HOST])
                     _LOGGER.info("updating config entry {}".format(entry.title))
                     _LOGGER.debug("debug: {}".format(entry))
-                    self.hass.config_entries.async_update_entry(entry, data={ BARNEYMAN_DEVICES : newdata } )
+                    newentrydata={ BARNEYMAN_DEVICES : newdata }
+                    # force a change - the 'has anything changed' logic is not great with data
+                    entry.data=None
+                    heard = self.hass.config_entries.async_update_entry(entry, data=newentrydata )
+                    if not heard:
+                        _LOGGER.error("config change for {} unheard".format(newentrydata))
                 else:
                     _LOGGER.info("host {} has already been added".format(disco_info[BARNEYMAN_HOST]))
-                    
+
                 return self.async_abort(reason="already_configured")
 
 
