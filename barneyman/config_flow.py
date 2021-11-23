@@ -87,7 +87,7 @@ class FlowHandler(config_entries.ConfigFlow):
                     _LOGGER.info("updating config entry {}".format(entry.title))
                     _LOGGER.debug("debug: {}".format(entry))
                     newentrydata={ BARNEYMAN_DEVICES : newdata }
-                    # force a change - the 'has anything changed' logic is not great with data
+                    # # force a change - the 'has anything changed' logic is not great with data
                     entry.data=None
                     heard = self.hass.config_entries.async_update_entry(entry, data=newentrydata )
                     if not heard:
