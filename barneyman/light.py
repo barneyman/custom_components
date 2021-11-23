@@ -297,7 +297,8 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
         _LOGGER.info("light {} async_parseData ha been called!".format(self._hostname))
 
-        self.hass.async_run_job(self.async_subscribe("light"))
+        if self.hass is not None:
+            self.hass.async_run_job(self.async_subscribe("light"))
 
         if self._rest.data is None:
             _LOGGER.error("no rest data from %s", self._name)
