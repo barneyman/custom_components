@@ -35,9 +35,6 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         # reload me
         await async_scan_for(config_entry)
 
-        """Update options."""
-        await hass.config_entries.async_reload(entry.entry_id)
-
     async def async_scan_for(config_entry):
 
         addResult = await addBJFcamera(config_entry.data, async_add_devices, hass)
