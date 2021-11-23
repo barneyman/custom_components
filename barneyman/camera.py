@@ -56,7 +56,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     return addResult
 
-
+wip=[]
 async def addBJFcamera(data, add_devices, hass):
     _LOGGER.info("addBJFcamera querying %s", data)
 
@@ -64,8 +64,14 @@ async def addBJFcamera(data, add_devices, hass):
 
     for hostname in data[BARNEYMAN_DEVICES]:
 
+        if hostname in wip:
+            _LOGGER.debug("already seen in WIP %s", hostname)
+            continue
+
         if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
             continue
+
+        wip.append(hostname)
 
 
         config = await async_doQuery(hostname, "/json/config", True)
@@ -109,9 +115,11 @@ async def addBJFcamera(data, add_devices, hass):
         else:
             _LOGGER.error("Failed to query %s", hostname)
 
-    add_devices(camerasToAdd)
+        wip.remove(hostname)
 
-    return True
+    if add_devices is not None:
+        add_devices(camerasToAdd)
+        return True
 
     
     return False

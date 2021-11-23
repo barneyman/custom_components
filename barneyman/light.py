@@ -136,6 +136,8 @@ async def async_setup(hass, config_entry):
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
 
 
+wip=[]
+
 # TODO - find all the lights, and inc the ordinal
 async def addBJFlight(data, add_devices, hass):
 
@@ -143,11 +145,17 @@ async def addBJFlight(data, add_devices, hass):
 
     for hostname in data[BARNEYMAN_DEVICES]:
 
+        if hostname in wip:
+            _LOGGER.debug("already seen in WIP %s", hostname)
+            continue
+
         if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
+            _LOGGER.debug("already seen %s", hostname)
             continue
 
         # first - query the light
         _LOGGER.info("querying %s", hostname)
+        wip.append(hostname)
 
         config = await async_doQuery(hostname, "/json/config", True)
 
@@ -186,6 +194,7 @@ async def addBJFlight(data, add_devices, hass):
         else:
             _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
 
+        wip.remove(hostname)
 
     if add_devices is not None:
         add_devices(potentials)

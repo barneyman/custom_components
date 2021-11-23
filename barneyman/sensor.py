@@ -69,18 +69,23 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
 
-
+wip=[]
 async def addBJFsensor(data, add_devices, hass):
 
     sensorsToAdd = []
 
     for hostname in data[BARNEYMAN_DEVICES]:
 
+        if hostname in wip:
+            _LOGGER.debug("already seen in WIP %s", hostname)
+            continue
+
         if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
             _LOGGER.info("device {} has already been added".format(hostname))
             continue
 
         _LOGGER.info("addBJFsensor querying %s", hostname)
+        wip.append(hostname)
 
         #config = doQuery(hostname, "/json/config", True)
         config = await async_doQuery(hostname, "/json/config", True)
@@ -197,6 +202,8 @@ async def addBJFsensor(data, add_devices, hass):
 
         else:
             _LOGGER.error("Failed to query %s", hostname)
+
+        wip.remove(hostname)
 
     if add_devices is not None:
         add_devices(sensorsToAdd)
