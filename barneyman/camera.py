@@ -11,12 +11,8 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.components.camera import Camera
 from .barneymanconst import (
-    BARNEYMAN_HOST,
-    LISTENING_PORT,
-    AUTH_TOKEN,
     BARNEYMAN_DEVICES,
-    BARNEYMAN_DEVICES_SEEN,
-    BARNEYMAN_CONFIG_ENTRY
+    BARNEYMAN_DEVICES_SEEN
 
 )
 from .helpers import async_doQuery, doQuery, doPost, BJFDeviceInfo, BJFListener

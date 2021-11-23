@@ -7,9 +7,6 @@ from homeassistant.components.rest.sensor import RestSensor
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import (
-    BARNEYMAN_HOST,
-    LISTENING_PORT,
-    AUTH_TOKEN,
     BARNEYMAN_DEVICES,
     BARNEYMAN_DEVICES_SEEN
 

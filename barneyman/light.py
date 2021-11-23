@@ -11,7 +11,6 @@ import homeassistant.util.color as color_util
 from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import (
     BARNEYMAN_HOST,
-    AUTH_TOKEN,
     BARNEYMAN_DEVICES,
     BARNEYMAN_DEVICES_SEEN
     
