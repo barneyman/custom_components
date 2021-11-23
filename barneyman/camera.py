@@ -30,13 +30,6 @@ DOMAIN = "barneyman"
 async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("CAMERA async_setup_entry: %s", config_entry.data)
 
-    if config_entry.title != BARNEYMAN_CONFIG_ENTRY:
-
-        if config_entry in hass.config_entries:
-            _LOGGER.error("Old config entry - removing {}".format(config_entry.title))
-            await hass.config_entries.async_remove(config_entry.entry_id)
-            return False
-
     async def async_update_options(hass, entry) -> None:
 
         # reload me

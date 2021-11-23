@@ -13,7 +13,8 @@ from .barneymanconst import (
     DEVICES_CAMERA,
     LISTENING_PORT,
     AUTH_TOKEN,
-    BARNEYMAN_DEVICES_SEEN
+    BARNEYMAN_DEVICES_SEEN,
+    BARNEYMAN_CONFIG_ENTRY
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,6 +64,15 @@ async def async_setup_entry(hass, entry):
     # this is in configuration yaml
     if AUTH_TOKEN in entry.data:
         hass.data[DOMAIN][AUTH_TOKEN] = entry.data[AUTH_TOKEN]
+
+    # check for legacy ...
+    if entry.title != BARNEYMAN_CONFIG_ENTRY:
+
+        if entry in hass.config_entries:
+            _LOGGER.error("Old config entry - removing {}".format(entry.title))
+            await hass.config_entries.async_remove(entry.entry_id)
+            return False
+
 
     # then forward this to all the platforms
     _LOGGER.info("forwarding to platforms %s %s", entry.title, entry.data)

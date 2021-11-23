@@ -13,8 +13,8 @@ from .barneymanconst import (
     BARNEYMAN_HOST,
     AUTH_TOKEN,
     BARNEYMAN_DEVICES,
-    BARNEYMAN_DEVICES_SEEN,
-    BARNEYMAN_CONFIG_ENTRY
+    BARNEYMAN_DEVICES_SEEN
+    
 )
 from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost, async_doQuery
 
@@ -96,12 +96,6 @@ async def async_remove_entry(hass, entry):
 async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry.data)
 
-    if config_entry.title != BARNEYMAN_CONFIG_ENTRY:
-
-        if config_entry in hass.config_entries:
-            _LOGGER.error("Old config entry - removing {}".format(config_entry.title))
-            await hass.config_entries.async_remove(config_entry.entry_id)
-            return False
 
 
     async def async_update_options(hass, entry) -> None:
