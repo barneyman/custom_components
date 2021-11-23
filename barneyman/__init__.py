@@ -68,7 +68,7 @@ async def async_setup_entry(hass, entry):
     # check for legacy ...
     if entry.title != BARNEYMAN_CONFIG_ENTRY:
 
-        if entry in hass.config_entries:
+        if hass.config_entries.async_get_entry(entry.entry_id) is not None:
             _LOGGER.error("Old config entry - removing {}".format(entry.title))
             await hass.config_entries.async_remove(entry.entry_id)
             return False
