@@ -62,19 +62,15 @@ class FlowHandler(config_entries.ConfigFlow):
     async def async_step_zeroconf(self, disco_info):
         """Handle zeroconf discovery."""
 
-        _LOGGER.warning("barneyman async_step_zeroconf called : {}".format(disco_info))
+        _LOGGER.info("barneyman async_step_zeroconf called : {}".format(disco_info))
 
         if disco_info is None:
             return self.async_abort(reason="cannot_connect")
 
-        # TODO fix this check
         # check we're not already doing this in a configflow
-        # if any(
-        #     BARNEYMAN_CONFIG_ENTRY == flow["context"].get(BARNEYMAN_HOST)
-        #     for flow in self._async_in_progress()
-        # ):
-        #     _LOGGER.info("host {} is already being configured".format(disco_info[BARNEYMAN_HOST]))
-        #     return self.async_abort(reason="already_in_progress")
+        if len(self._async_in_progress())>1:
+            _LOGGER.warning("barneyman is already being configured")
+            return self.async_abort(reason="already_in_progress")
 
         # and check we haven't already seen this host
         _LOGGER.debug("_async_current_entries called : {}".format(self._async_current_entries()))
