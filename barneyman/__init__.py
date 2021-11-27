@@ -76,6 +76,8 @@ async def async_setup_entry(hass, entry):
 
     # then forward this to all the platforms
     _LOGGER.info("forwarding to platforms %s %s", entry.title, entry.data)
+
+    # use the current stored config, some things may not respond in time
     hass.config_entries.async_setup_platforms(entry, [DEVICES_LIGHT, DEVICES_SENSOR, DEVICES_CAMERA])
 
 

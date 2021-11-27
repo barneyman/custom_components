@@ -199,6 +199,7 @@ async def addBJFsensor(data, add_devices, hass):
 
         else:
             _LOGGER.error("Failed to query %s", hostname)
+            data[BARNEYMAN_DEVICES].remove(hostname)
 
         wip.remove(hostname)
 
