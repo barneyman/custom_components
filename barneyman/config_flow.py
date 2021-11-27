@@ -3,7 +3,7 @@ import voluptuous as vol
 import logging
 from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers import config_entry_flow
-from .barneymanconst import BARNEYMAN_HOST, BARNEYMAN_CONFIG_ENTRY, BARNEYMAN_DEVICES
+from .barneymanconst import BARNEYMAN_HOST, BARNEYMAN_CONFIG_ENTRY, BARNEYMAN_DEVICES, MDNS_HOSTNAME
 from .helpers import async_doExists
 
 
@@ -72,18 +72,18 @@ class FlowHandler(config_entries.ConfigFlow):
             _LOGGER.warning("barneyman is already being configured")
             return self.async_abort(reason="already_in_progress")
 
-        # and check we haven't already seen this host
+        # and check we haven't already seen this host, and recorded it as a configentry device
         _LOGGER.debug("_async_current_entries called : {}".format(self._async_current_entries()))
         for entry in self._async_current_entries():
             if BARNEYMAN_CONFIG_ENTRY == entry.title:
                 # it's already there - have we seen this host before?
                 if not any(
-                    disco_info[BARNEYMAN_HOST] == host 
-                    for host in entry.data[BARNEYMAN_DEVICES]
+                    disco_info[MDNS_HOSTNAME] == hostname 
+                    for hostname in entry.data[BARNEYMAN_DEVICES]
                 ):
                     # add it to the list
                     newdata=entry.data[BARNEYMAN_DEVICES]
-                    newdata.append(disco_info[BARNEYMAN_HOST])
+                    newdata.append(disco_info[MDNS_HOSTNAME])
                     _LOGGER.info("updating config entry {}".format(entry.title))
                     _LOGGER.debug("debug: {}".format(entry))
                     newentrydata={ BARNEYMAN_DEVICES : newdata }
@@ -93,7 +93,7 @@ class FlowHandler(config_entries.ConfigFlow):
                     if not heard:
                         _LOGGER.error("config change for {} unheard".format(newentrydata))
                 else:
-                    _LOGGER.info("host {} has already been added".format(disco_info[BARNEYMAN_HOST]))
+                    _LOGGER.info("host {} has already been added".format(disco_info[MDNS_HOSTNAME]))
 
                 return self.async_abort(reason="already_configured")
 
