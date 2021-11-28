@@ -110,7 +110,8 @@ async def addBJFcamera(data, add_devices, hass):
                         camerasToAdd.append(potential)
         else:
             _LOGGER.error("Failed to query %s", hostname)
-            data[BARNEYMAN_DEVICES].remove(hostname)
+            if hostname in data[BARNEYMAN_DEVICES]:
+                data[BARNEYMAN_DEVICES].remove(hostname)
 
 
         wip.remove(hostname)
