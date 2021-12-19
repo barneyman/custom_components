@@ -89,7 +89,7 @@ async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeo
 
     builtUrl="http://"+hostname+url
 
-    #_LOGGER.warning("barneyman async_doQuery to %s", builtUrl)
+    _LOGGER.debug("barneyman async_doQuery to %s", builtUrl)
 
     try:
 
@@ -103,11 +103,18 @@ async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeo
                 data=jsonBody,
                 timeout=timeout,
             )
+            response.raise_for_status()
             if returnJson:
                 _LOGGER.info("barneyman async_doQuery returned  %s", response.text)
                 return json.loads(response.text)
             else:
                 return True
+
+    except httpx.HTTPStatusError as exc:
+        _LOGGER.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
+
+    except httpx.RequestError as exc:
+        _LOGGER.error(f"An error occurred while requesting {exc.request.url!r}.")
 
     except Exception as e:
         _LOGGER.error("barneyman async_doQuery exception '%s' host '%s' url '%s'", str(e), hostname, url)
