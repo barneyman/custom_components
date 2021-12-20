@@ -76,14 +76,24 @@ class FlowHandler(config_entries.ConfigFlow):
         _LOGGER.debug("_async_current_entries called : {}".format(self._async_current_entries()))
         for entry in self._async_current_entries():
             if BARNEYMAN_CONFIG_ENTRY == entry.title:
+
+                def removeLocal(mdns):
+                    suffix=".local."
+                    if mdns.endswith(suffix):
+                        return mdns[:-len(suffix)]
+                    return mdns
+
                 # it's already there - have we seen this host before?
                 if not any(
-                    disco_info[MDNS_HOSTNAME] == hostname 
+                    removeLocal(disco_info.hostname) == hostname 
                     for hostname in entry.data[BARNEYMAN_DEVICES]
                 ):
+                    #remove .local from it
+                    dnshost=removeLocal(disco_info.hostname)
+                    
                     # add it to the list
                     newdata=entry.data[BARNEYMAN_DEVICES]
-                    newdata.append(disco_info[MDNS_HOSTNAME])
+                    newdata.append(dnshost)
                     _LOGGER.info("updating config entry {}".format(entry.title))
                     _LOGGER.debug("debug: {}".format(entry))
                     newentrydata={ BARNEYMAN_DEVICES : newdata }
@@ -93,7 +103,7 @@ class FlowHandler(config_entries.ConfigFlow):
                     if not heard:
                         _LOGGER.error("config change for {} unheard".format(newentrydata))
                 else:
-                    _LOGGER.info("host {} has already been added".format(disco_info[MDNS_HOSTNAME]))
+                    _LOGGER.info("host {} has already been added".format(disco_info.hostname))
 
                 return self.async_abort(reason="already_configured")
 
