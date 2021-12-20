@@ -198,7 +198,7 @@ async def addBJFsensor(data, add_devices, hass):
 
 
         else:
-            _LOGGER.error("Failed to query %s", hostname)
+            _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
             if hostname in data[BARNEYMAN_DEVICES]:
                 data[BARNEYMAN_DEVICES].remove(hostname)
 
