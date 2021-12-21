@@ -299,6 +299,7 @@ class luxLightInstance(Entity):
 
     def saveState(self, data):
         self._hass.data[DOMAIN][self._name] = json.dumps(data)
+        self._hass.states.set("sensor.luxlights",data["state"], data)
 
     def loadState(self):
         return json.loads(self._hass.data[DOMAIN][self._name])
