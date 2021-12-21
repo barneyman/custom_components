@@ -373,22 +373,6 @@ class luxLightInstance(Entity):
         pass
 
 
-    # @property
-    # def state_attributes(self) -> Dict[str, Any]:
-
-    #     # how many are there?
-    #     listFound=self._hass.data[DOMAIN][DISCOVERY_ROOT][DEVICES_ADDED]
-
-
-    #     data = {
-    #         "deviceCount": len(listFound),
-    #         "devices": listFound
-    #     }
-
-    #     return data
-
-
-
 def setup(hass, baseConfig):
     """Set up is called when Home Assistant is loading our component."""
 
@@ -399,27 +383,6 @@ def setup(hass, baseConfig):
     # iterate thru the items
     for eachInstance in config["instances"]:
         luxInstances.append(luxLightInstance(hass,eachInstance))
-
-
-    # # TODO check this function
-    # def handle_turnoff(call):
-    #     for instance in luxInstances:
-    #         instance.softOff(None)
-
-    # # this gets called from an automation, it's a hard OFF
-    # def handle_forceoff(call):
-    #     for instance in luxInstances:
-    #         instance.hardOff(None)
-
-    # reset my state, normally done sunset-hrs
-    # def handle_enableCheck(call):
-    #     for instance in luxInstances:
-    #         instance.resetCheck()
-
-
-    # hass.services.register(DOMAIN, "enable_check", handle_enableCheck)
-    # hass.services.register(DOMAIN, "turn_off", handle_turnoff)
-    # hass.services.register(DOMAIN, "force_off", handle_forceoff)
 
 
     # Return boolean to indicate that initialization was successfully.
