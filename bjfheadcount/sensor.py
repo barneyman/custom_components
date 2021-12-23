@@ -65,7 +65,7 @@ class HeadCountSensor(Entity):
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
-        return "ppl"
+        return "pax"
 
     def update(self):
         """Fetch new state data for the sensor.
