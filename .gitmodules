@@ -4,3 +4,6 @@
 [submodule "HAassets/brands"]
 	path = HAassets/brands
 	url = https://github.com/barneyman/brands.git
+[submodule "sunload"]
+	path = sunload
+	url = https://github.com/barneyman/sunload.git
