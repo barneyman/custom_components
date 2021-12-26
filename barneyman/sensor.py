@@ -144,7 +144,7 @@ async def addBJFsensor(data, add_devices, hass):
                                 # entity name
                                 friendlyName+" "+eachSensor["name"] + " " + deviceClass,
                                 deviceClass,
-                                "",
+                                None,
                                 sensorValue,
                                 eachSensor["sensor"],
                                 deviceClass,
@@ -256,7 +256,7 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
 
         # and subscribe for data updates
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_alertHA)
+            self.coordinator.async_add_listener(self.async_alertUpdate)
         )        
 
 
@@ -270,7 +270,7 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
         return self._unique_id
 
     @callback
-    def async_alertHA(self):
+    def async_alertUpdate(self):
         self._update_from_rest_data()
 
 
@@ -319,10 +319,10 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):#, ):
         self._hostname = hostname
         self._deviceClass = deviceType
 
-        # and subscribe for data updates
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_parseData)
-        )        
+        # # and subscribe for data updates
+        # self.async_on_remove(
+        #     self.coordinator.async_add_listener(self.async_parseData)
+        # )        
 
         self._is_on = None
 
@@ -338,11 +338,13 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):#, ):
     @property
     def is_on(self):
         """Return true if the binary sensor is on."""
+        _LOGGER.debug("is_on called {} state {} ", self.entity_id, self._state)
         return self._is_on
 
     @property
     def state(self):
         """Return the state of the binary sensor."""
+        _LOGGER.debug("state called {} state {} ", self.entity_id, self._state)
         return self._is_on #STATE_ON if self._is_on==True else STATE_OFF
 
     @property
@@ -351,9 +353,12 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):#, ):
         return self._deviceClass
 
     @callback
-    def async_parseData(self):
+    def async_alertUpdate(self):
         # subscribe
         _LOGGER.info("doing binarysensor async_update")
+        self._update_from_rest_data()
+        self.async_write_ha_state()
+        _LOGGER.debug("Got {} from {} using {}".format(self._state, self.rest.data, self._value_template))
         # work out my on state (._state is provided by the restsensor)
         self._is_on=self._state
                         
