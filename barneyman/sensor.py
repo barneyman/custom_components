@@ -144,7 +144,7 @@ async def addBJFsensor(data, add_devices, hass):
                                 # entity name
                                 friendlyName+" "+eachSensor["name"] + " " + deviceClass,
                                 deviceClass,
-                                None,
+                                "",
                                 sensorValue,
                                 eachSensor["sensor"],
                                 deviceClass,
@@ -278,7 +278,7 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
 
 
 # inherit from a BinarySensorDevice so the icons work right
-class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
+class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):#, ):
     def __init__(
         self,
         hass,
