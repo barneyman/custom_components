@@ -89,7 +89,7 @@ async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeo
 
     builtUrl="http://"+hostname+url
 
-    _LOGGER.debug("barneyman async_doQuery to %s", builtUrl)
+    _LOGGER.info("barneyman async_doQuery to %s", builtUrl)
 
     try:
 
@@ -221,18 +221,18 @@ class BJFRestData(RestData):
             doAnUpdate=False
 
             if self._lastUpdate is None or self.data is None:
-                _LOGGER.debug("BJFRestData - first update")
+                _LOGGER.info("BJFRestData - first update")
                 doAnUpdate=True
             else:
                 now = datetime.now()
                 if (now - self._lastUpdate).total_seconds() > self._cacheTimeout:
-                    _LOGGER.debug(
+                    _LOGGER.info(
                         "BJFRestData - data is stale %d secs",
                         (now - self._lastUpdate).total_seconds(),
                     )
                     doAnUpdate=True
                 else:
-                    _LOGGER.debug("BJFRestData - cache hit")
+                    _LOGGER.info("BJFRestData - cache hit")
 
         if doAnUpdate:
 
@@ -245,7 +245,7 @@ class BJFRestData(RestData):
                 self._isUpdating=False
             
             else:
-                _LOGGER.debug("BJFRestData - Waiting on another async ...")
+                _LOGGER.info("BJFRestData - Waiting on another async ...")
 
                 # just spin until it's been updated
                 while self._isUpdating:
@@ -254,20 +254,20 @@ class BJFRestData(RestData):
     def update(self):
 
         if self._lastUpdate is None or self.data is None:
-            _LOGGER.debug("BJFRestData - first update")
+            _LOGGER.info("BJFRestData - first update")
             # changed to async, update deprecated
             self.updateRestData()
 
         else:
             now = datetime.now()
             if (now - self._lastUpdate).total_seconds() > self._cacheTimeout:
-                _LOGGER.debug(
+                _LOGGER.info(
                     "BJFRestData - data is stale %d secs",
                     (now - self._lastUpdate).total_seconds(),
                 )
                 self.updateRestData()
             else:
-                _LOGGER.debug("BJFRestData - cache hit")
+                _LOGGER.info("BJFRestData - cache hit")
 
 
 class BJFListener:
@@ -275,6 +275,7 @@ class BJFListener:
 
         self._lastSubscribed=None
         self._subscribeTimeoutMinutes=5
+        self._hass=hass
 
         # spin up a thread, tell it the udp
         if transport == "tcp":
@@ -305,7 +306,7 @@ class BJFListener:
             hass.data[DOMAIN][LISTENING_PORT] = self._port + 1
 
     def udpListener(self):
-        _LOGGER.debug("udpListener started port %d ...", self._port)
+        _LOGGER.info("udpListener started port %d ...", self._port)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # yes, a tuple '' is 'all local addrs'
@@ -318,7 +319,7 @@ class BJFListener:
 
     def tcpListener(self):
 
-        _LOGGER.debug("tcpListener started port %d ...", self._port)
+        _LOGGER.info("tcpListener started port %d ...", self._port)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # yes, a tuple '' is 'all local addrs'
@@ -359,11 +360,12 @@ class BJFListener:
 
     def subscribe(self, deviceType):
 
+        _LOGGER.info("Subscribing %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
+
         # we do this periodicall, in case the remote device has been rebooted
         # and forgotten we love them
         if self._lastSubscribed is None or ((time.time()-self._lastSubscribed)>self._subscribeTimeoutMinutes*60):
 
-            _LOGGER.debug("Subscribing %s '%s'",deviceType, self.entity_id)
 
             recipient = self.build_recipient(deviceType)
 
@@ -373,26 +375,29 @@ class BJFListener:
             self._lastSubscribed=time.time()
 
         else:
-            _LOGGER.debug("subscribe ignored")
+            _LOGGER.info("subscribe ignored")
 
 
     async def async_subscribe(self, deviceType):
 
+        _LOGGER.info("AsyncSubscribing %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
         # we do this periodicall, in case the remote device has been rebooted
         # and forgotten we love them
         if self._lastSubscribed is None or ((time.time()-self._lastSubscribed)>self._subscribeTimeoutMinutes*60):
 
-            _LOGGER.debug("Subscribing %s '%s'",deviceType, self.entity_id)
+            _LOGGER.info("Proceeding %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
 
             recipient = self.build_recipient(deviceType)
 
             # advise the sensor we're listening
-            await async_doPost(self._hostname, "/json/listen", json.dumps(recipient))
+            async_doPost(self._hostname, "/json/listen", json.dumps(recipient))
+
+            _LOGGER.info("Succeeded %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
 
             self._lastSubscribed=time.time()
 
         else:
-            _LOGGER.debug("subscribe ignored")
+            _LOGGER.info("subscribe ignored")
 
     def build_recipient(self,deviceType):
         recipient = {}
@@ -400,7 +405,7 @@ class BJFListener:
             recipient["port"] = self.getPort()
         recipient[deviceType] = self._ordinal
         recipient["endpoint"] = "/api/states/" + self.entity_id  #  light.study_light
-        recipient["auth"] = self.hass.data[DOMAIN][AUTH_TOKEN]
+        recipient["auth"] = self._hass.data[DOMAIN][AUTH_TOKEN]
 
         _LOGGER.debug(recipient)
 
