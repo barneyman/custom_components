@@ -227,7 +227,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
         # and subscribe for data updates
         self.async_on_remove(
-            coord.async_add_listener(self.async_parseData)
+            coord.async_add_listener(self.parseData)
         )        
 
 
@@ -295,12 +295,12 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
 
     @callback
-    def async_parseData(self):
+    def parseData(self):
 
-        _LOGGER.info("light {} async_parseData ha been called!".format(self._hostname))
+        _LOGGER.info("light {} parseData ha been called!".format(self._hostname))
 
-        if self.hass is not None:
-            self.hass.async_run_job(self.async_subscribe("light"))
+        if self._hass is not None:
+            self._hass.add_job(self.subscribe,"light")
 
         if self._rest.data is None:
             _LOGGER.error("no rest data from %s", self._name)
