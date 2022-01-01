@@ -360,7 +360,7 @@ class BJFListener:
 
     def subscribe(self, deviceType):
 
-        _LOGGER.info("Subscribing %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
+        _LOGGER.info("Subscribing %s '%s' '%s'",deviceType, self.entity_id,self._host)
 
         # we do this periodicall, in case the remote device has been rebooted
         # and forgotten we love them
@@ -370,7 +370,7 @@ class BJFListener:
             recipient = self.build_recipient(deviceType)
 
             # advise the sensor we're listening
-            doPost(self._hostname, "/json/listen", json.dumps(recipient))
+            doPost(self._host, "/json/listen", json.dumps(recipient))
 
             self._lastSubscribed=time.time()
 
@@ -380,19 +380,19 @@ class BJFListener:
 
     async def async_subscribe(self, deviceType):
 
-        _LOGGER.info("AsyncSubscribing %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
+        _LOGGER.info("AsyncSubscribing %s '%s' '%s'",deviceType, self.entity_id,self._host)
         # we do this periodicall, in case the remote device has been rebooted
         # and forgotten we love them
         if self._lastSubscribed is None or ((time.time()-self._lastSubscribed)>self._subscribeTimeoutMinutes*60):
 
-            _LOGGER.info("Proceeding %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
+            _LOGGER.info("Proceeding %s '%s' '%s'",deviceType, self.entity_id,self._host)
 
             recipient = self.build_recipient(deviceType)
 
             # advise the sensor we're listening
-            async_doPost(self._hostname, "/json/listen", json.dumps(recipient))
+            async_doPost(self._host, "/json/listen", json.dumps(recipient))
 
-            _LOGGER.info("Succeeded %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
+            _LOGGER.info("Succeeded %s '%s' '%s'",deviceType, self.entity_id,self._host)
 
             self._lastSubscribed=time.time()
 

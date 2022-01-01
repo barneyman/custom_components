@@ -58,7 +58,10 @@ async def addBJFcamera(data, add_devices, hass):
 
     camerasToAdd = []
 
-    for hostname in data[BARNEYMAN_DEVICES]:
+    for device in data[BARNEYMAN_DEVICES]:
+        
+        hostname=device["hostname"]
+        host=device["ip"]
 
         if hostname in wip:
             _LOGGER.debug("already seen in WIP %s", hostname)
@@ -70,7 +73,7 @@ async def addBJFcamera(data, add_devices, hass):
         wip.append(hostname)
 
 
-        config = await async_doQuery(hostname, "/json/config", True)
+        config = await async_doQuery(host, "/json/config", True)
 
         if config != None:
 

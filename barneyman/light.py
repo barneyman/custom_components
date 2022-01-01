@@ -142,7 +142,10 @@ async def addBJFlight(data, add_devices, hass):
 
     potentials = []
 
-    for hostname in data[BARNEYMAN_DEVICES]:
+    for device in data[BARNEYMAN_DEVICES]:
+        
+        hostname=device["hostname"]
+        host=device["ip"]
 
         if hostname in wip:
             _LOGGER.debug("already seen in WIP %s", hostname)
@@ -153,10 +156,10 @@ async def addBJFlight(data, add_devices, hass):
             continue
 
         # first - query the light
-        _LOGGER.info("querying %s", hostname)
+        _LOGGER.info("querying %s @ %s", hostname, host)
         wip.append(hostname)
 
-        config = await async_doQuery(hostname, "/json/config", True)
+        config = await async_doQuery(host, "/json/config", True)
 
         if config != None:
 
@@ -180,7 +183,7 @@ async def addBJFlight(data, add_devices, hass):
                         transport = switchConfig["impl"]
 
                     potential = bjfESPLight(
-                        hostname,coord, mac, config, switchConfig["switch"], rest, transport, hass
+                        host,coord, mac, config, switchConfig["switch"], rest, transport, hass
                     )
 
                     # does this already exist?
@@ -207,7 +210,7 @@ async def addBJFlight(data, add_devices, hass):
 
 
 class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
-    def __init__(self, hostname, coord, mac, config, ordinal, rest, transport, hass):
+    def __init__(self, host, coord, mac, config, ordinal, rest, transport, hass):
         BJFDeviceInfo.__init__(self, config)
         BJFListener.__init__(self, transport, hass)
         CoordinatorEntity.__init__(self,coord)
@@ -220,7 +223,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
         self._state = None
         self._unique_id = mac + "_switch_" + str(ordinal)
         self._mac = mac
-        self._hostname = hostname
+        self._host = host
         self._ordinal = ordinal
         self._rest = rest
         self._hass = hass
@@ -233,7 +236,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
     def HandleIncomingPacket(self, data):
 
-        _LOGGER.warning("Publish from {}",self._hostname)
+        _LOGGER.warning("Publish from {}",self._host)
 
         payload = json.loads(data.decode("utf-8"))
 
@@ -268,7 +271,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
         # self._light.brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         # self._light.turn_on()
 
-        doPost(self._hostname, "/button?action=on&port=" + str(self._ordinal))
+        doPost(self._host, "/button?action=on&port=" + str(self._ordinal))
         self._rest.resetCache()
         asyncio.run_coroutine_threadsafe(
             self.coordinator.async_refresh(), self.hass.loop
@@ -278,7 +281,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
     def turn_off(self, **kwargs):
         """Instruct the light to turn off."""
 
-        doPost(self._hostname, "/button?action=off&port=" + str(self._ordinal))
+        doPost(self._host, "/button?action=off&port=" + str(self._ordinal))
         # and reset the cache
         self._rest.resetCache()
         asyncio.run_coroutine_threadsafe(
@@ -297,7 +300,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
     @callback
     def parseData(self):
 
-        _LOGGER.info("light {} parseData ha been called!".format(self._hostname))
+        _LOGGER.info("light {} parseData ha been called!".format(self._host))
 
         if self._hass is not None:
             self._hass.add_job(self.subscribe,"light")
@@ -408,7 +411,7 @@ class bjfESPRGBLight(bjfESPLight):
                 r=rgb[0], g=rgb[1], b=rgb[2], effect=self._effect
             )
             _LOGGER.info("querying %s", query)
-            doPost(self._hostname, query)
+            doPost(self._host, query)
         # else:
         #    self._light.command('on')
 

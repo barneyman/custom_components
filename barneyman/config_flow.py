@@ -62,6 +62,7 @@ class FlowHandler(config_entries.ConfigFlow):
     async def async_step_zeroconf(self, disco_info):
         """Handle zeroconf discovery."""
 
+        # ZeroconfServiceInfo(host='192.168.51.144', port=80, hostname='esp_b75c4f.local.', type='_barneyman._tcp.local.', name='esp_b75c4f._barneyman._tcp.local.', properties={'_raw': {}}, _warning_logged=False)
         _LOGGER.info("barneyman async_step_zeroconf called : {}".format(disco_info))
 
         if disco_info is None:
@@ -77,23 +78,18 @@ class FlowHandler(config_entries.ConfigFlow):
         for entry in self._async_current_entries():
             if BARNEYMAN_CONFIG_ENTRY == entry.title:
 
-                def removeLocal(mdns):
-                    suffix=".local."
-                    if mdns.endswith(suffix):
-                        return mdns[:-len(suffix)]
-                    return mdns
-
                 # it's already there - have we seen this host before?
                 if not any(
-                    removeLocal(disco_info.hostname) == hostname 
-                    for hostname in entry.data[BARNEYMAN_DEVICES]
+                    (disco_info.hostname) == hostentry["hostname"]
+                    for hostentry in entry.data[BARNEYMAN_DEVICES]
                 ):
-                    #remove .local from it
-                    dnshost=removeLocal(disco_info.hostname)
+                    dnshost=disco_info.hostname
                     
                     # add it to the list
                     newdata=entry.data[BARNEYMAN_DEVICES]
-                    newdata.append(dnshost)
+                    newentry={"hostname":dnshost, "ip":disco_info.host}
+                    newdata.append(newentry)
+
                     _LOGGER.info("updating config entry {}".format(entry.title))
                     _LOGGER.debug("debug: {}".format(entry))
                     newentrydata={ BARNEYMAN_DEVICES : newdata }
