@@ -79,15 +79,19 @@ class FlowHandler(config_entries.ConfigFlow):
             if BARNEYMAN_CONFIG_ENTRY == entry.title:
 
                 # it's already there - have we seen this host before?
+                newdata=entry.data[BARNEYMAN_DEVICES]
+                dnshost=disco_info.hostname
+                ipaddr=disco_info.host
+
                 if not any(
                     (disco_info.hostname) == hostentry["hostname"]
                     for hostentry in entry.data[BARNEYMAN_DEVICES]
                 ):
-                    dnshost=disco_info.hostname
+                    
                     
                     # add it to the list
-                    newdata=entry.data[BARNEYMAN_DEVICES]
-                    newentry={"hostname":dnshost, "ip":disco_info.host}
+                    
+                    newentry={"hostname":dnshost, "ip":ipaddr}
                     newdata.append(newentry)
 
                     _LOGGER.info("updating config entry {}".format(entry.title))
@@ -99,6 +103,17 @@ class FlowHandler(config_entries.ConfigFlow):
                     if not heard:
                         _LOGGER.error("config change for {} unheard".format(newentrydata))
                 else:
+                    # just blast the new ip over it
+                    for each in newdata:
+                        if each["hostname"]==dnshost:
+                            each["ip"]=ipaddr
+                            newentrydata={ BARNEYMAN_DEVICES : newdata }
+                            entry.data=None
+                            heard = self.hass.config_entries.async_update_entry(entry, data=newentrydata )
+                            if not heard:
+                                _LOGGER.error("config change for {} unheard".format(newentrydata))
+
+
                     _LOGGER.info("host {} has already been added".format(disco_info.hostname))
 
                 return self.async_abort(reason="already_configured")

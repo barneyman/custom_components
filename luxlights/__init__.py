@@ -223,6 +223,12 @@ class luxLightInstance(Entity):
             _LOGGER.warning("headcount sensor unavailable, bailing")
             return
 
+        # check to see we're not locked out
+        for each in ["sensor.sunload_southside","sensor.sunload_northside"]:
+            if self._hass.states.is_state(each,'True'):
+                _LOGGER.warning("headcount sensor disabled by {}, bailing".format(each))
+                return
+
         # get the values we need
         try:
             luxValue = float(lux.state)

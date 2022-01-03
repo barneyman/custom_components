@@ -14,7 +14,7 @@ from .barneymanconst import (
 
 from homeassistant.core import callback
 
-from .helpers import doQuery, doPost, BJFDeviceInfo, BJFRestData, BJFListener, async_doQuery
+from .helpers import doQuery, doPost, BJFDeviceInfo, BJFRestData, BJFListener, async_doQuery, BJFFinder
 from typing import Any, Dict, List, Optional
 
 from homeassistant.const import STATE_OFF, STATE_ON
@@ -95,8 +95,7 @@ async def addBJFsensor(data, add_devices, hass):
             mac = config["mac"]
 
             # built early, in case it's shared
-            url = "http://" + config["ip"] + "/json/state"
-            rest = BJFRestData(hass,"GET", url, None, None, None, httptimeout=10, cacheTimeout=0)
+            rest = BJFRestData(hass,hostname, "GET", None, None, None)
 
 
             friendlyName = (
@@ -105,7 +104,7 @@ async def addBJFsensor(data, add_devices, hass):
 
 
             # and add a datacoordinator
-            coord = DataUpdateCoordinator(hass,_LOGGER,name=friendlyName+"_DUC", update_method=rest.async_update,update_interval=timedelta(seconds=30))
+            coord = DataUpdateCoordinator(hass,_LOGGER,name=friendlyName+"_DUC", update_method=rest.async_bjfupdate,update_interval=timedelta(seconds=30))
 
             await coord.async_config_entry_first_refresh()
 
@@ -216,7 +215,7 @@ async def addBJFsensor(data, add_devices, hass):
 
 
 # in py, vtable priority is left to right
-class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
+class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo,BJFFinder, RestSensor):
     def __init__(
         self,
         hass,
@@ -232,22 +231,25 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
         element,
         config,
     ):
-        _LOGGER.info("Creating sensor.%s", name)
+        _LOGGER.info("Creating sensor.'{}' - '{}'".format(name, jsonSensorQuery))
 
-# self,
-#         coordinator,
-#         rest,
-#         name,
-#         unit_of_measurement,
-#         device_class,
-#         state_class,
-#         value_template,
-#         json_attrs,
-#         force_update,
-#         resource_template,
-#         json_attrs_path,
+
+        BJFFinder.__init__(self,hass,hostname)
 
         CoordinatorEntity.__init__(self,coord)
+
+        # self,
+        # coordinator,
+        # rest,
+        # name,
+        # unit_of_measurement,
+        # device_class,
+        # state_class,
+        # value_template,
+        # json_attrs,
+        # force_update,
+        # resource_template,
+        # json_attrs_path,
 
         RestSensor.__init__(
             # sensorclass 
@@ -317,7 +319,7 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):#, ):
             config,
         )
 
-        BJFListener.__init__(self, transport, hass)
+        BJFListener.__init__(self, transport, hass, hostname)
 
         self._name = name
         self._hass = hass

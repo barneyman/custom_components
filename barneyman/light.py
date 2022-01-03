@@ -165,11 +165,10 @@ async def addBJFlight(data, add_devices, hass):
 
             mac = config["mac"]
 
-            url = "http://" + config["ip"] + "/json/state"
-            rest = BJFRestData(hass, "GET", url, None, None, None, httptimeout=10, cacheTimeout=0)
+            rest = BJFRestData(hass, hostname, "GET", None, None, None)
 
             # and add a datacoordinator
-            coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_update,update_interval=timedelta(seconds=30))
+            coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_bjfupdate,update_interval=timedelta(seconds=30))
 
             await coord.async_config_entry_first_refresh()
 
@@ -183,7 +182,7 @@ async def addBJFlight(data, add_devices, hass):
                         transport = switchConfig["impl"]
 
                     potential = bjfESPLight(
-                        host,coord, mac, config, switchConfig["switch"], rest, transport, hass
+                        hostname ,coord, mac, config, switchConfig["switch"], rest, transport, hass
                     )
 
                     # does this already exist?
@@ -209,10 +208,10 @@ async def addBJFlight(data, add_devices, hass):
     return False
 
 
-class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
-    def __init__(self, host, coord, mac, config, ordinal, rest, transport, hass):
+class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
+    def __init__(self, hostname, coord, mac, config, ordinal, rest, transport, hass):
         BJFDeviceInfo.__init__(self, config)
-        BJFListener.__init__(self, transport, hass)
+        BJFListener.__init__(self, transport, hass, hostname)
         CoordinatorEntity.__init__(self,coord)
 
         self._config = config
@@ -223,7 +222,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
         self._state = None
         self._unique_id = mac + "_switch_" + str(ordinal)
         self._mac = mac
-        self._host = host
+        self._hostname = hostname
         self._ordinal = ordinal
         self._rest = rest
         self._hass = hass
@@ -236,7 +235,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
     def HandleIncomingPacket(self, data):
 
-        _LOGGER.warning("Publish from {}",self._host)
+        _LOGGER.warning("Publish from {}",self._hostname)
 
         payload = json.loads(data.decode("utf-8"))
 
@@ -271,7 +270,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
         # self._light.brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         # self._light.turn_on()
 
-        doPost(self._host, "/button?action=on&port=" + str(self._ordinal))
+        doPost(self._hostname, "/button?action=on&port=" + str(self._ordinal))
         self._rest.resetCache()
         asyncio.run_coroutine_threadsafe(
             self.coordinator.async_refresh(), self.hass.loop
@@ -281,7 +280,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
     def turn_off(self, **kwargs):
         """Instruct the light to turn off."""
 
-        doPost(self._host, "/button?action=off&port=" + str(self._ordinal))
+        doPost(self._hostname, "/button?action=off&port=" + str(self._ordinal))
         # and reset the cache
         self._rest.resetCache()
         asyncio.run_coroutine_threadsafe(
@@ -300,7 +299,7 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
     @callback
     def parseData(self):
 
-        _LOGGER.info("light {} parseData ha been called!".format(self._host))
+        _LOGGER.info("light {} parseData ha been called!".format(self._hostname))
 
         if self._hass is not None:
             self._hass.add_job(self.subscribe,"light")
@@ -411,7 +410,7 @@ class bjfESPRGBLight(bjfESPLight):
                 r=rgb[0], g=rgb[1], b=rgb[2], effect=self._effect
             )
             _LOGGER.info("querying %s", query)
-            doPost(self._host, query)
+            doPost(self._hostname, query)
         # else:
         #    self._light.command('on')
 
