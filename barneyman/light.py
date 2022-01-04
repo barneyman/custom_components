@@ -15,7 +15,7 @@ from .barneymanconst import (
     BARNEYMAN_DEVICES_SEEN
     
 )
-from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost, async_doQuery
+from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost, async_doQuery, BJFFinder
 
 
 from homeassistant.core import callback
@@ -168,7 +168,7 @@ async def addBJFlight(data, add_devices, hass):
             rest = BJFRestData(hass, hostname, "GET", None, None, None)
 
             # and add a datacoordinator
-            coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_bjfupdate,update_interval=timedelta(seconds=30))
+            coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_bjfupdate,update_interval=timedelta(seconds=10))
 
             await coord.async_config_entry_first_refresh()
 
@@ -227,6 +227,8 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
         self._rest = rest
         self._hass = hass
 
+        self._finder=BJFFinder(hass,hostname)
+
         # and subscribe for data updates
         self.async_on_remove(
             coord.async_add_listener(self.parseData)
@@ -270,8 +272,8 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
         # self._light.brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         # self._light.turn_on()
 
-        doPost(self._hostname, "/button?action=on&port=" + str(self._ordinal))
-        self._rest.resetCache()
+        
+        doPost(self._finder.getIPaddress(), "/button?action=on&port=" + str(self._ordinal))
         asyncio.run_coroutine_threadsafe(
             self.coordinator.async_refresh(), self.hass.loop
             ).result()
@@ -280,9 +282,8 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
     def turn_off(self, **kwargs):
         """Instruct the light to turn off."""
 
-        doPost(self._hostname, "/button?action=off&port=" + str(self._ordinal))
+        doPost(self._finder.getIPaddress(), "/button?action=off&port=" + str(self._ordinal))
         # and reset the cache
-        self._rest.resetCache()
         asyncio.run_coroutine_threadsafe(
             self.coordinator.async_refresh(), self.hass.loop
             ).result()

@@ -104,9 +104,9 @@ async def addBJFsensor(data, add_devices, hass):
 
 
             # and add a datacoordinator
-            coord = DataUpdateCoordinator(hass,_LOGGER,name=friendlyName+"_DUC", update_method=rest.async_bjfupdate,update_interval=timedelta(seconds=30))
+            coord = DataUpdateCoordinator(hass,_LOGGER,name=friendlyName+"_DUC", update_method=rest.async_bjfupdate,update_interval=timedelta(seconds=10))
 
-            await coord.async_config_entry_first_refresh()
+            
 
             #await hass.async_add_executor_job(coord.async_config_entry_first_refresh)
 
@@ -198,6 +198,7 @@ async def addBJFsensor(data, add_devices, hass):
 
                             hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN].append(hostname)
 
+            await coord.async_config_entry_first_refresh()
 
         else:
             _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
@@ -368,7 +369,9 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):#, ):
             self._hass.add_job(self.subscribe,"sensor")
         
         self._update_from_rest_data()
-        self.async_write_ha_state()
+        if self.hass is not None:
+            self.async_write_ha_state()
+
         _LOGGER.debug("Got {} from {} using {}".format(self._state, self.rest.data, self._value_template))
         # work out my on state (._state is provided by the restsensor)
         self._is_on=self._state
