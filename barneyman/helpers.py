@@ -347,6 +347,9 @@ class BJFListener:
 
             recipient = self.build_recipient(deviceType)
 
+            if recipient==None:
+                return
+
             # advise the sensor we're listening
             doPost(self._finder.getIPaddress(), "/json/listen", json.dumps(recipient))
 
@@ -367,6 +370,9 @@ class BJFListener:
 
             recipient = self.build_recipient(deviceType)
 
+            if recipient==None:
+                return
+
             # advise the sensor we're listening
             async_doPost(self._finder.getIPaddress(), "/json/listen", json.dumps(recipient))
 
@@ -378,6 +384,10 @@ class BJFListener:
             _LOGGER.info("subscribe ignored")
 
     def build_recipient(self,deviceType):
+        
+        if self.entity_id == None:
+            return None
+        
         recipient = {}
         if self.getPort() is not None:
             recipient["port"] = self.getPort()
