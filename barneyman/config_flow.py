@@ -59,6 +59,7 @@ class FlowHandler(config_entries.ConfigFlow):
         return self.async_abort(reason="under_construction")
 
     # when i'm mdns discovered
+    # components.zeroconf.ZeroconfServiceInfo
     async def async_step_zeroconf(self, disco_info):
         """Handle zeroconf discovery."""
 
@@ -91,7 +92,7 @@ class FlowHandler(config_entries.ConfigFlow):
                     
                     # add it to the list
                     
-                    newentry={"hostname":dnshost, "ip":ipaddr}
+                    newentry={"hostname":dnshost, "ip":ipaddr, "properties":disco_info.properties}
                     newdata.append(newentry)
 
                     _LOGGER.info("updating config entry {}".format(entry.title))
@@ -107,6 +108,7 @@ class FlowHandler(config_entries.ConfigFlow):
                     for each in newdata:
                         if each["hostname"]==dnshost:
                             each["ip"]=ipaddr
+                            each["properties"]=disco_info.properties
                             newentrydata={ BARNEYMAN_DEVICES : newdata }
                             entry.data=None
                             heard = self.hass.config_entries.async_update_entry(entry, data=newentrydata )
