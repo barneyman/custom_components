@@ -14,7 +14,7 @@ from .barneymanconst import (
 
 from homeassistant.core import callback
 
-from .helpers import doQuery, doPost, BJFDeviceInfo, BJFRestData, BJFListener, async_doQuery
+from .helpers import doQuery, doPost, BJFDeviceInfo, BJFRestData, BJFListener, async_doQuery, BJFFinder
 from typing import Any, Dict, List, Optional
 
 from homeassistant.const import STATE_OFF, STATE_ON
@@ -71,7 +71,10 @@ async def addBJFsensor(data, add_devices, hass):
 
     sensorsToAdd = []
 
-    for hostname in data[BARNEYMAN_DEVICES]:
+    for device in data[BARNEYMAN_DEVICES]:
+        
+        hostname=device["hostname"]
+        host=device["ip"]
 
         if hostname in wip:
             _LOGGER.debug("already seen in WIP %s", hostname)
@@ -81,19 +84,18 @@ async def addBJFsensor(data, add_devices, hass):
             _LOGGER.info("device {} has already been added".format(hostname))
             continue
 
-        _LOGGER.info("addBJFsensor querying %s", hostname)
+        _LOGGER.info("addBJFsensor querying %s @ %s", hostname, host)
         wip.append(hostname)
 
         #config = doQuery(hostname, "/json/config", True)
-        config = await async_doQuery(hostname, "/json/config", True)
+        config = await async_doQuery(host, "/json/config", True)
 
         if config != None:
 
             mac = config["mac"]
 
             # built early, in case it's shared
-            url = "http://" + config["ip"] + "/json/state"
-            rest = BJFRestData(hass,"GET", url, None, None, None, httptimeout=10, cacheTimeout=0)
+            rest = BJFRestData(hass,hostname, "GET", None, None, None)
 
 
             friendlyName = (
@@ -102,9 +104,9 @@ async def addBJFsensor(data, add_devices, hass):
 
 
             # and add a datacoordinator
-            coord = DataUpdateCoordinator(hass,_LOGGER,name=friendlyName+"_DUC", update_method=rest.async_update,update_interval=timedelta(seconds=30))
+            coord = DataUpdateCoordinator(hass,_LOGGER,name=friendlyName+"_DUC", update_method=rest.async_bjfupdate,update_interval=timedelta(seconds=10))
 
-            await coord.async_config_entry_first_refresh()
+            
 
             #await hass.async_add_executor_job(coord.async_config_entry_first_refresh)
 
@@ -196,9 +198,10 @@ async def addBJFsensor(data, add_devices, hass):
 
                             hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN].append(hostname)
 
+            await coord.async_config_entry_first_refresh()
 
         else:
-            _LOGGER.error("Failed to query %s", hostname)
+            _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
             if hostname in data[BARNEYMAN_DEVICES]:
                 data[BARNEYMAN_DEVICES].remove(hostname)
 
@@ -213,7 +216,7 @@ async def addBJFsensor(data, add_devices, hass):
 
 
 # in py, vtable priority is left to right
-class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
+class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo,BJFFinder, RestSensor):
     def __init__(
         self,
         hass,
@@ -229,22 +232,25 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
         element,
         config,
     ):
-        _LOGGER.info("Creating sensor.%s", name)
+        _LOGGER.info("Creating sensor.'{}' - '{}'".format(name, jsonSensorQuery))
 
-# self,
-#         coordinator,
-#         rest,
-#         name,
-#         unit_of_measurement,
-#         device_class,
-#         state_class,
-#         value_template,
-#         json_attrs,
-#         force_update,
-#         resource_template,
-#         json_attrs_path,
+
+        BJFFinder.__init__(self,hass,hostname)
 
         CoordinatorEntity.__init__(self,coord)
+
+        # self,
+        # coordinator,
+        # rest,
+        # name,
+        # unit_of_measurement,
+        # device_class,
+        # state_class,
+        # value_template,
+        # json_attrs,
+        # force_update,
+        # resource_template,
+        # json_attrs_path,
 
         RestSensor.__init__(
             # sensorclass 
@@ -256,13 +262,14 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
 
         # and subscribe for data updates
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_alertHA)
+            self.coordinator.async_add_listener(self.alertUpdate)
         )        
 
 
         self._unique_id = mac + "_sensor_" + str(ordinal) + "_" + element
         self._hostname = hostname
         self._mac = mac
+        self._hass=hass
 
     @property
     def unique_id(self):
@@ -270,15 +277,17 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, RestSensor):
         return self._unique_id
 
     @callback
-    def async_alertHA(self):
+    def alertUpdate(self):
         self._update_from_rest_data()
+        # if self._hass is not None:
+        #     self._hass.add_job(self.async_subscribe,"sensor")
 
 
 
 
 
 # inherit from a BinarySensorDevice so the icons work right
-class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
+class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):#, ):
     def __init__(
         self,
         hass,
@@ -311,7 +320,7 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
             config,
         )
 
-        BJFListener.__init__(self, transport, hass)
+        BJFListener.__init__(self, transport, hass, hostname)
 
         self._name = name
         self._hass = hass
@@ -319,10 +328,10 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
         self._hostname = hostname
         self._deviceClass = deviceType
 
-        # and subscribe for data updates
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_parseData)
-        )        
+        # # and subscribe for data updates
+        # self.async_on_remove(
+        #     self.coordinator.async_add_listener(self.async_parseData)
+        # )        
 
         self._is_on = None
 
@@ -338,11 +347,13 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
     @property
     def is_on(self):
         """Return true if the binary sensor is on."""
+        _LOGGER.debug("is_on called {} state {} ", self.entity_id, self._state)
         return self._is_on
 
     @property
     def state(self):
         """Return the state of the binary sensor."""
+        _LOGGER.debug("state called {} state {} ", self.entity_id, self._state)
         return self._is_on #STATE_ON if self._is_on==True else STATE_OFF
 
     @property
@@ -351,9 +362,17 @@ class BJFBinarySensor(BJFRestSensor, BJFListener, BinarySensorEntity):
         return self._deviceClass
 
     @callback
-    def async_parseData(self):
+    def alertUpdate(self):
         # subscribe
         _LOGGER.info("doing binarysensor async_update")
+        if self._hass is not None:
+            self._hass.add_job(self.subscribe,"sensor")
+        
+        self._update_from_rest_data()
+        if self.hass is not None:
+            self.async_write_ha_state()
+
+        _LOGGER.debug("Got {} from {} using {}".format(self._state, self.rest.data, self._value_template))
         # work out my on state (._state is provided by the restsensor)
         self._is_on=self._state
                         

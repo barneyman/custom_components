@@ -15,7 +15,7 @@ from .barneymanconst import (
     BARNEYMAN_DEVICES_SEEN
     
 )
-from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost, async_doQuery
+from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost, async_doQuery, BJFFinder
 
 
 from homeassistant.core import callback
@@ -142,7 +142,10 @@ async def addBJFlight(data, add_devices, hass):
 
     potentials = []
 
-    for hostname in data[BARNEYMAN_DEVICES]:
+    for device in data[BARNEYMAN_DEVICES]:
+        
+        hostname=device["hostname"]
+        host=device["ip"]
 
         if hostname in wip:
             _LOGGER.debug("already seen in WIP %s", hostname)
@@ -153,20 +156,19 @@ async def addBJFlight(data, add_devices, hass):
             continue
 
         # first - query the light
-        _LOGGER.info("querying %s", hostname)
+        _LOGGER.info("querying %s @ %s", hostname, host)
         wip.append(hostname)
 
-        config = await async_doQuery(hostname, "/json/config", True)
+        config = await async_doQuery(host, "/json/config", True)
 
         if config != None:
 
             mac = config["mac"]
 
-            url = "http://" + config["ip"] + "/json/state"
-            rest = BJFRestData(hass, "GET", url, None, None, None, httptimeout=10, cacheTimeout=0)
+            rest = BJFRestData(hass, hostname, "GET", None, None, None)
 
             # and add a datacoordinator
-            coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_update,update_interval=timedelta(seconds=30))
+            coord = DataUpdateCoordinator(hass,_LOGGER,name=hostname+"_DUC", update_method=rest.async_bjfupdate,update_interval=timedelta(seconds=10))
 
             await coord.async_config_entry_first_refresh()
 
@@ -180,7 +182,7 @@ async def addBJFlight(data, add_devices, hass):
                         transport = switchConfig["impl"]
 
                     potential = bjfESPLight(
-                        hostname,coord, mac, config, switchConfig["switch"], rest, transport, hass
+                        hostname ,coord, mac, config, switchConfig["switch"], rest, transport, hass
                     )
 
                     # does this already exist?
@@ -206,10 +208,10 @@ async def addBJFlight(data, add_devices, hass):
     return False
 
 
-class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
+class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
     def __init__(self, hostname, coord, mac, config, ordinal, rest, transport, hass):
         BJFDeviceInfo.__init__(self, config)
-        BJFListener.__init__(self, transport, hass)
+        BJFListener.__init__(self, transport, hass, hostname)
         CoordinatorEntity.__init__(self,coord)
 
         self._config = config
@@ -225,9 +227,11 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
         self._rest = rest
         self._hass = hass
 
+        self._finder=BJFFinder(hass,hostname)
+
         # and subscribe for data updates
         self.async_on_remove(
-            coord.async_add_listener(self.async_parseData)
+            coord.async_add_listener(self.parseData)
         )        
 
 
@@ -268,8 +272,8 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
         # self._light.brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         # self._light.turn_on()
 
-        doPost(self._hostname, "/button?action=on&port=" + str(self._ordinal))
-        self._rest.resetCache()
+        
+        doPost(self._finder.getIPaddress(), "/button?action=on&port=" + str(self._ordinal))
         asyncio.run_coroutine_threadsafe(
             self.coordinator.async_refresh(), self.hass.loop
             ).result()
@@ -278,9 +282,8 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
     def turn_off(self, **kwargs):
         """Instruct the light to turn off."""
 
-        doPost(self._hostname, "/button?action=off&port=" + str(self._ordinal))
+        doPost(self._finder.getIPaddress(), "/button?action=off&port=" + str(self._ordinal))
         # and reset the cache
-        self._rest.resetCache()
         asyncio.run_coroutine_threadsafe(
             self.coordinator.async_refresh(), self.hass.loop
             ).result()
@@ -295,12 +298,12 @@ class bjfESPLight(CoordinatorEntity,BJFDeviceInfo, BJFListener, LightEntity):
 
 
     @callback
-    def async_parseData(self):
+    def parseData(self):
 
-        _LOGGER.info("light {} async_parseData ha been called!".format(self._hostname))
+        _LOGGER.info("light {} parseData ha been called!".format(self._hostname))
 
-        if self.hass is not None:
-            self.hass.async_run_job(self.async_subscribe("light"))
+        if self._hass is not None:
+            self._hass.add_job(self.subscribe,"light")
 
         if self._rest.data is None:
             _LOGGER.error("no rest data from %s", self._name)

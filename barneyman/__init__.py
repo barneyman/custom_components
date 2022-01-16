@@ -39,7 +39,7 @@ async def async_setup(hass, baseConfig):
     if DOMAIN in baseConfig:
         if AUTH_TOKEN in baseConfig[DOMAIN]:
             myAuthToken=baseConfig[DOMAIN][AUTH_TOKEN]
-            _LOGGER.debug("barneyman authtoken %s", myAuthToken)
+            _LOGGER.debug("barneyman authtoken found")
         if LISTENING_PORT in baseConfig[DOMAIN]:
             listeningPort=baseConfig[DOMAIN][LISTENING_PORT]
             _LOGGER.debug("barneyman port %d", listeningPort)
@@ -64,6 +64,7 @@ async def async_setup_entry(hass, entry):
     # this is in configuration yaml
     if AUTH_TOKEN in entry.data:
         hass.data[DOMAIN][AUTH_TOKEN] = entry.data[AUTH_TOKEN]
+        _LOGGER.info("barneyman authtoken found")
 
     # check for legacy ...
     if entry.title != BARNEYMAN_CONFIG_ENTRY:
