@@ -226,7 +226,7 @@ class luxLightInstance(Entity):
         # check to see we're not locked out
         for each in ["sensor.sunload_southside","sensor.sunload_northside"]:
             if self._hass.states.is_state(each,'True'):
-                _LOGGER.warning("headcount sensor disabled by {}, bailing".format(each))
+                _LOGGER.info("headcount sensor disabled by {}, bailing".format(each))
                 return
 
         # get the values we need
