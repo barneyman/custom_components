@@ -58,6 +58,9 @@ async def addBJFcamera(data, add_devices, hass):
 
     camerasToAdd = []
 
+    if BARNEYMAN_DEVICES not in data:
+        return False
+
     for device in data[BARNEYMAN_DEVICES]:
         
         hostname=device["hostname"]
