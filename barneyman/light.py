@@ -306,7 +306,8 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
             self._hass.add_job(self.subscribe,"light")
 
         if self._rest.data is None:
-            _LOGGER.error("no rest data from %s", self._name)
+            # will be reported by the rest sensor so redundant as error
+            _LOGGER.debug("no rest data from %s", self._name)
             return None
 
         jsonData = json.loads(self._rest.data)
