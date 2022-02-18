@@ -142,6 +142,9 @@ async def addBJFlight(data, add_devices, hass):
 
     potentials = []
 
+    if BARNEYMAN_DEVICES not in data:
+        return False
+
     for device in data[BARNEYMAN_DEVICES]:
         
         hostname=device["hostname"]

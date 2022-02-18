@@ -71,6 +71,10 @@ async def addBJFsensor(data, add_devices, hass):
 
     sensorsToAdd = []
 
+    if BARNEYMAN_DEVICES not in data:
+        return False
+
+
     for device in data[BARNEYMAN_DEVICES]:
         
         hostname=device["hostname"]

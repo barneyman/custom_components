@@ -264,7 +264,7 @@ class luxLightInstance(Entity):
 
 
         # check lux
-        if luxValue < minLuxValue:
+        if luxValue <= minLuxValue:
             nextStateValue["scene"] = "lit_scene"
         else:
             nextStateValue["scene"] = "unlit_scene"
