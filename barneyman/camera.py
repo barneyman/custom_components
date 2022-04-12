@@ -183,7 +183,7 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
             self.async_camera_image(), self.hass.loop
         ).result()
 
-    async def async_camera_image(self):
+    async def async_camera_image(self, width = None, height = None):
         """Return a still image response from the camera."""
 
         # if self._camUrl == self._last_url and self._limit_refetch:
