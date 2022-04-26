@@ -69,6 +69,10 @@ class FlowHandler(config_entries.ConfigFlow):
         if disco_info is None:
             return self.async_abort(reason="cannot_connect")
 
+        # kill the _raw key
+        if "_raw" in disco_info.properties:
+            disco_info.properties.pop("_raw",None)
+
         # check we're not already doing this in a configflow
         if len(self._async_in_progress())>1:
             _LOGGER.warning("barneyman is already being configured")
@@ -92,7 +96,7 @@ class FlowHandler(config_entries.ConfigFlow):
                     
                     # add it to the list
                     
-                    newentry={"hostname":dnshost, "ip":ipaddr, "properties":disco_info.properties}
+                    newentry={"hostname":dnshost, "ip":ipaddr, "properties":{ disco_info.properties }}
                     newdata.append(newentry)
 
                     _LOGGER.info("updating config entry {}".format(entry.title))
@@ -104,6 +108,7 @@ class FlowHandler(config_entries.ConfigFlow):
                     if not heard:
                         _LOGGER.error("config change for {} unheard".format(newentrydata))
                 else:
+
                     # just blast the new ip over it
                     for each in newdata:
                         if each["hostname"]==dnshost:
@@ -114,6 +119,7 @@ class FlowHandler(config_entries.ConfigFlow):
                             heard = self.hass.config_entries.async_update_entry(entry, data=newentrydata )
                             if not heard:
                                 _LOGGER.error("config change for {} unheard".format(newentrydata))
+                            break
 
 
                     _LOGGER.info("host {} has already been added".format(disco_info.hostname))
@@ -123,7 +129,7 @@ class FlowHandler(config_entries.ConfigFlow):
 
         # lets add our config entry, with our first item in the list
         self.zeroconf_info={
-            BARNEYMAN_DEVICES: [ { "hostname" : disco_info.hostname, "ip":disco_info.host } ],
+            BARNEYMAN_DEVICES: [ { "hostname" : disco_info.hostname, "ip":disco_info.host, "properties":{ disco_info.properties } } ],
         }
 
         return await self.async_step_parseuser(self.zeroconf_info)

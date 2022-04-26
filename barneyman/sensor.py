@@ -8,7 +8,8 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import (
     BARNEYMAN_DEVICES,
-    BARNEYMAN_DEVICES_SEEN
+    BARNEYMAN_DEVICES_SEEN,
+    DEVICES_SENSOR
 
 )
 
@@ -87,6 +88,14 @@ async def addBJFsensor(data, add_devices, hass):
         if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
             _LOGGER.info("device {} has already been added".format(hostname))
             continue
+
+        # optimisation, if they have a pltforms property, bail early on that
+        if "properties" in device and "platforms" in device["properties"]:
+            _LOGGER.info("device has platforms %s", device["properties"]["platforms"])
+            if DEVICES_SENSOR not in device["properties"]["platforms"].split(","):
+                _LOGGER.info("optimised config fetch out")
+                continue
+
 
         _LOGGER.info("addBJFsensor querying %s @ %s", hostname, host)
         wip.append(hostname)
