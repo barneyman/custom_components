@@ -154,6 +154,7 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
         self._frame_interval=5
         self._camUrl=camUrl
         self._last_image=None
+        self._incommserror=False
 
         self._supported_features = 0
 
@@ -165,6 +166,17 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
     @property
     def name(self):
         return self._name
+
+    @property
+    def brand(self) -> str:
+        """Return the camera brand."""
+        return "AI Thinker"
+
+    @property
+    def model(self) -> str:
+        """Return the camera model."""
+        return "ESP32-CAM"
+
 
 
     @property
@@ -196,11 +208,18 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
             with async_timeout.timeout(10):
                 response = await websession.get(self._camUrl)
             self._last_image = await response.read()
+            if self._incommserror:
+                _LOGGER.error("%s no longer in comms error", self._name)
+                self._incommserror=False
         except asyncio.TimeoutError:
-            _LOGGER.error("Timeout getting image from: %s", self._name)
+            if not self._incommserror:
+                _LOGGER.error("Timeout getting image from: %s", self._name)
+                self._incommserror=True
             return self._last_image
         except aiohttp.ClientError as err:
-            _LOGGER.error("Error getting new camera image: %s", err)
+            if not self._incommserror:
+                _LOGGER.error("Error getting new camera image: %s", err)
+                self._incommserror=True
             return self._last_image
 
         self._last_url = self._camUrl
