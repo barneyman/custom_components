@@ -12,7 +12,8 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.components.camera import Camera
 from .barneymanconst import (
     BARNEYMAN_DEVICES,
-    BARNEYMAN_DEVICES_SEEN
+    BARNEYMAN_DEVICES_SEEN,
+    DEVICES_CAMERA
 
 )
 from .helpers import async_doQuery, doQuery, doPost, BJFDeviceInfo, BJFListener
@@ -72,6 +73,14 @@ async def addBJFcamera(data, add_devices, hass):
 
         if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
             continue
+
+        # optimisation, if they have a pltforms property, bail early on that
+        if "properties" in device and "platforms" in device["properties"]:
+            _LOGGER.info("device has platforms %s", device["properties"]["platforms"])
+            if DEVICES_CAMERA not in device["properties"]["platforms"].split(","):
+                _LOGGER.info("optimised config fetch out")
+                continue
+
 
         wip.append(hostname)
 

@@ -12,7 +12,8 @@ from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import (
     BARNEYMAN_HOST,
     BARNEYMAN_DEVICES,
-    BARNEYMAN_DEVICES_SEEN
+    BARNEYMAN_DEVICES_SEEN,
+    DEVICES_LIGHT
     
 )
 from .helpers import doQuery, BJFDeviceInfo, BJFRestData, BJFListener, doPost, async_doQuery, BJFFinder
@@ -157,6 +158,14 @@ async def addBJFlight(data, add_devices, hass):
         if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
             _LOGGER.debug("already seen %s", hostname)
             continue
+
+        # optimisation, if they have a pltforms property, bail early on that
+        if "properties" in device and "platforms" in device["properties"]:
+            _LOGGER.info("device has platforms %s", device["properties"]["platforms"])
+            if DEVICES_LIGHT not in device["properties"]["platforms"].split(","):
+                _LOGGER.info("optimised config fetch out")
+                continue
+
 
         # first - query the light
         _LOGGER.info("querying %s @ %s", hostname, host)
