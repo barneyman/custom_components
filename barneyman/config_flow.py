@@ -73,6 +73,8 @@ class FlowHandler(config_entries.ConfigFlow):
         if "_raw" in disco_info.properties:
             disco_info.properties.pop("_raw",None)
 
+        _LOGGER.debug(disco_info.properties)
+
         # check we're not already doing this in a configflow
         if len(self._async_in_progress())>1:
             _LOGGER.warning("barneyman is already being configured")
@@ -96,7 +98,7 @@ class FlowHandler(config_entries.ConfigFlow):
                     
                     # add it to the list
                     
-                    newentry={"hostname":dnshost, "ip":ipaddr, "properties":{ disco_info.properties }}
+                    newentry={"hostname":dnshost, "ip":ipaddr, "properties": disco_info.properties }
                     newdata.append(newentry)
 
                     _LOGGER.info("updating config entry {}".format(entry.title))
