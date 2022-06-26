@@ -131,7 +131,7 @@ class FlowHandler(config_entries.ConfigFlow):
 
         # lets add our config entry, with our first item in the list
         self.zeroconf_info={
-            BARNEYMAN_DEVICES: [ { "hostname" : disco_info.hostname, "ip":disco_info.host, "properties":{ disco_info.properties } } ],
+            BARNEYMAN_DEVICES: [ { "hostname" : disco_info.hostname, "ip":disco_info.host, "properties": disco_info.properties  } ],
         }
 
         return await self.async_step_parseuser(self.zeroconf_info)
