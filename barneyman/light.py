@@ -101,6 +101,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     async def async_update_options(hass, entry) -> None:
 
         # reload me
+        _LOGGER.info("async_update_options {}".format(entry.title))
         await async_scan_for(entry)
 
         """Update options."""

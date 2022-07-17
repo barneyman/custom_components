@@ -33,7 +33,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     async def async_update_options(hass, entry) -> None:
 
-        _LOGGER.debug("async_update_options {}".format(entry.title))
+        _LOGGER.info("async_update_options {}".format(entry.title))
         # reload me
         await async_scan_for(config_entry)
 
