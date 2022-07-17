@@ -86,7 +86,7 @@ class FlowHandler(config_entries.ConfigFlow):
             if BARNEYMAN_CONFIG_ENTRY == entry.title:
 
                 # it's already there - have we seen this host before?
-                newdata=entry.data[BARNEYMAN_DEVICES]
+                newdata=copy.deepcopy(entry.data[BARNEYMAN_DEVICES])
                 dnshost=disco_info.hostname
                 ipaddr=disco_info.host
 
@@ -104,8 +104,7 @@ class FlowHandler(config_entries.ConfigFlow):
                     _LOGGER.info("updating config entry {}".format(entry.title))
                     _LOGGER.debug("debug: {}".format(entry))
                     newentrydata={ BARNEYMAN_DEVICES : newdata }
-                    # # force a change - the 'has anything changed' logic is not great with data
-                    entry.data=None
+                    # force a change - we deep copied the data, so this should be seen as new
                     heard = self.hass.config_entries.async_update_entry(entry, data=newentrydata )
                     if not heard:
                         _LOGGER.error("config change for {} unheard".format(newentrydata))
