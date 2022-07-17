@@ -6,6 +6,9 @@ import voluptuous as vol
 # from homeassistant.helpers.discovery import load_platform
 # from homeassistant.helpers import config_entry_flow
 from .barneymanconst import BARNEYMAN_HOST, BARNEYMAN_CONFIG_ENTRY, BARNEYMAN_DEVICES
+from homeassistant.config_entries import data_entry_flow
+from typing import Any  ##, Optional, TypeVar, cast
+
 
 # from .helpers import async_doExists
 
@@ -27,10 +30,13 @@ class FlowHandler(config_entries.ConfigFlow):
         # """Initialize flow."""
         self._host = None
         self._import_groups = False
+        self.zeroconf_info = None
 
     # this gets called thru "integration - Add (big yellow '+' bottom right!)"
     # or from zeroconf
-    async def async_step_user(self, user_input):
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> data_entry_flow.FlowResult:
         _LOGGER.info("barneyman async_step_user ")
 
         if user_input is None:
@@ -80,7 +86,7 @@ class FlowHandler(config_entries.ConfigFlow):
 
         # and check we haven't already seen this host, and recorded it as a configentry device
         _LOGGER.debug(
-            "_async_current_entries called : {}".format(self._async_current_entries())
+            "_async_current_entries called : %s", self._async_current_entries()
         )
         for entry in self._async_current_entries():
             if BARNEYMAN_CONFIG_ENTRY == entry.title:
@@ -104,17 +110,15 @@ class FlowHandler(config_entries.ConfigFlow):
                     }
                     newdata.append(newentry)
 
-                    _LOGGER.info("updating config entry {}".format(entry.title))
-                    _LOGGER.debug("debug: {}".format(entry))
+                    _LOGGER.info("updating config entry %s", (entry.title))
+                    _LOGGER.debug("debug: %s", (entry))
                     newentrydata = {BARNEYMAN_DEVICES: newdata}
                     # force a change - we deep copied the data, so this should be seen as new
                     heard = self.hass.config_entries.async_update_entry(
                         entry, data=newentrydata
                     )
                     if not heard:
-                        _LOGGER.error(
-                            "config change for {} unheard".format(newentrydata)
-                        )
+                        _LOGGER.error("config change for %s unheard", (newentrydata))
                 else:
 
                     # just blast the new ip over it
@@ -129,12 +133,12 @@ class FlowHandler(config_entries.ConfigFlow):
                             )
                             if not heard:
                                 _LOGGER.error(
-                                    "config change for {} unheard".format(newentrydata)
+                                    "config change for %s unheard", (newentrydata)
                                 )
                             break
 
                     _LOGGER.info(
-                        "host {} has already been added".format(discovery_info.hostname)
+                        "host %s has already been added", (discovery_info.hostname)
                     )
 
                 return self.async_abort(reason="already_configured")

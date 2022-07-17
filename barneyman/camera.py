@@ -1,17 +1,19 @@
 import logging
-import json
+
+# import json
 import asyncio
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import aiohttp
 import async_timeout
-import voluptuous as vol
-from datetime import datetime, timedelta
-from homeassistant.helpers.template import Template
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import async_track_time_interval
+
+# import voluptuous as vol
+# from datetime import datetime, timedelta
+# from homeassistant.helpers.template import Template
+# from homeassistant.helpers.entity import Entity
+# from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.components.camera import Camera
 from .barneymanconst import BARNEYMAN_DEVICES, BARNEYMAN_DEVICES_SEEN, DEVICES_CAMERA
-from .helpers import async_doQuery, doQuery, doPost, BJFDeviceInfo, BJFListener
+from .helpers import async_doQuery, BJFDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +26,9 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     async def async_update_options(hass, entry) -> None:
 
-        _LOGGER.info("async_update_options {}".format(entry.title))
+        # pylint: disable=unused-argument
+
+        _LOGGER.info("async_update_options %s", entry.title)
         # reload me
         await async_scan_for(config_entry)
 
@@ -120,7 +124,7 @@ async def addBJFcamera(data, add_devices, hass):
                     )
 
                     if potential is not None:
-                        _LOGGER.info("Adding camera %s", potential._unique_id)
+                        _LOGGER.info("Adding camera %s", potential.unique_id)
                         camerasToAdd.append(potential)
         else:
             _LOGGER.error(
@@ -150,6 +154,8 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
         camNumber,
         config,
     ):
+        # pylint: disable=unused-argument
+
         Camera.__init__(self)
         BJFDeviceInfo.__init__(self, config, mac)
 
@@ -160,7 +166,7 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
         self._camUrl = camUrl
         self._last_image = None
         self._incommserror = False
-
+        self._last_url = None
         self._supported_features = 0
 
     @property
@@ -192,7 +198,9 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
         """Return the interval between frames of the mjpeg stream."""
         return self._frame_interval
 
-    def camera_image(self):
+    def camera_image(
+        self, width: int | None = None, height: int | None = None
+    ) -> bytes | None:
         """Return bytes of camera image."""
         return asyncio.run_coroutine_threadsafe(
             self.async_camera_image(), self.hass.loop

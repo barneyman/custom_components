@@ -2,15 +2,17 @@ import logging
 import http.client
 import json
 from homeassistant.components.rest.data import RestData
-from datetime import datetime, timedelta
+
+# from datetime import datetime, timedelta
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import threading
 import socket
 import time
 import httpx
-from .barneymanconst import BARNEYMAN_HOST, LISTENING_PORT, AUTH_TOKEN
+from sqlalchemy import false
+from .barneymanconst import LISTENING_PORT, AUTH_TOKEN
 
-import asyncio
+# import asyncio
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -111,11 +113,13 @@ async def async_doQuery(
 
     except httpx.HTTPStatusError as exc:
         _LOGGER.error(
-            f"Error response {exc.response.status_code} while requesting {exc.request.url!r}."
+            "Error response %s while requesting %s.",
+            str(exc.response.status_code),
+            exc.request.url,
         )
 
     except httpx.RequestError as exc:
-        _LOGGER.error(f"An error occurred while requesting {exc.request.url!r}.")
+        _LOGGER.error("An error occurred while requesting %s.", exc.request.url)
 
     except Exception as e:
         _LOGGER.error(
@@ -178,24 +182,24 @@ class BJFFinder:
 
     def getIPaddress(self):
 
-        _LOGGER.debug("async_getIPaddress for {}".format(self._hostname))
+        _LOGGER.debug("async_getIPaddress for %s", (self._hostname))
 
         entries = self._hass.config_entries.async_entries(DOMAIN)
 
         for eachEntry in entries:
 
-            _LOGGER.debug("eachEntry {}".format(eachEntry))
+            _LOGGER.debug("eachEntry %s", (eachEntry))
 
             myentries = eachEntry.data["Devices"]
 
-            _LOGGER.debug("myentries {}".format(myentries))
+            _LOGGER.debug("myentries %s", (myentries))
 
             for each in myentries:
                 if each["hostname"] == self._hostname:
-                    _LOGGER.info("found {} for {}".format(each["ip"], self._hostname))
+                    _LOGGER.info("found %s for %s", each["ip"], self._hostname)
                     return each["ip"]
 
-        _LOGGER.info("found nothing for {}".format(self._hostname))
+        _LOGGER.info("found nothing for %s", (self._hostname))
         return None
 
 
@@ -222,13 +226,13 @@ class BJFRestData(RestData, BJFFinder):
 
         url = "http://" + endip + "/json/state"
 
-        _LOGGER.debug("url for {}".format(url))
+        _LOGGER.debug("url for %s", (url))
 
         return url
 
     async def async_bjfupdate(self):
 
-        _LOGGER.debug("async_update for {} {}".format(self._hostname, self._verify_ssl))
+        _LOGGER.debug("async_update for %s %s", self._hostname, str(self._verify_ssl))
         # change _resource ** in the parent **
         # super(BJFRestData,self)._resource=self.getUrl()
         self._resource = self.getUrl()
@@ -246,6 +250,7 @@ class BJFListener:
         self.entity_id = None
         self._finder = BJFFinder(hass, hostname)
         self._ordinal = 0
+        self._runListener = false
 
         # spin up a thread, tell it the udp
         if transport == "tcp":
@@ -283,7 +288,8 @@ class BJFListener:
         sock.bind(("", self._port))
 
         while self._runListener:
-            data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
+            data, address = sock.recvfrom(1024)  # pylint: disable=unused-variable
+            # buffer size is 1024 bytes
 
             self.HandleIncomingPacket(data)
 
@@ -300,7 +306,11 @@ class BJFListener:
         while self._runListener:
 
             try:
-                (clientsocket, address) = sock.accept()
+                (
+                    clientsocket,
+                    address,  # pylint: disable=unused-variable
+                ) = sock.accept()
+
                 data = clientsocket.recv(1024)
                 _LOGGER.debug("recv out %d", len(data))
                 # deserialise
