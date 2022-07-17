@@ -8,11 +8,7 @@ import threading
 import socket
 import time
 import httpx
-from .barneymanconst import (
-    BARNEYMAN_HOST,
-    LISTENING_PORT,
-    AUTH_TOKEN
-)
+from .barneymanconst import BARNEYMAN_HOST, LISTENING_PORT, AUTH_TOKEN
 
 import asyncio
 
@@ -78,16 +74,19 @@ def doPost(
 ):
     return doQuery(hostname, url, returnJson, httpmethod, timeout, jsonBody)
 
+
 async def async_doPost(
     hostname, url, jsonBody=None, returnJson=False, httpmethod="POST", timeout=5
 ):
     return async_doQuery(hostname, url, returnJson, httpmethod, timeout, jsonBody)
 
 
-async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeout=30, jsonBody=None):
-#     """Get the latest data from REST service with provided method."""
+async def async_doQuery(
+    hostname, url, returnJson=False, httpmethod="GET", timeout=30, jsonBody=None
+):
+    #     """Get the latest data from REST service with provided method."""
 
-    builtUrl="http://"+hostname+url
+    builtUrl = "http://" + hostname + url
 
     _LOGGER.info("barneyman async_doQuery to %s", builtUrl)
 
@@ -111,21 +110,28 @@ async def async_doQuery(hostname, url, returnJson=False, httpmethod="GET", timeo
                 return True
 
     except httpx.HTTPStatusError as exc:
-        _LOGGER.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
+        _LOGGER.error(
+            f"Error response {exc.response.status_code} while requesting {exc.request.url!r}."
+        )
 
     except httpx.RequestError as exc:
         _LOGGER.error(f"An error occurred while requesting {exc.request.url!r}.")
 
     except Exception as e:
-        _LOGGER.error("barneyman async_doQuery exception '%s' host '%s' url '%s'", str(e), hostname, url)
+        _LOGGER.error(
+            "barneyman async_doQuery exception '%s' host '%s' url '%s'",
+            str(e),
+            hostname,
+            url,
+        )
 
     return None
 
 
-
 class BJFDeviceInfo:
-    def __init__(self, config):
+    def __init__(self, config, mac):
         self._config = config
+        self._mac = mac
 
     # https://developers.home-assistant.io/docs/device_registry_index/
     @property
@@ -136,19 +142,18 @@ class BJFDeviceInfo:
                 (CONNECTION_NETWORK_MAC, self._mac)
             },
             "name": self._config["name"],
-            "model": self._config["version"].split('|')[0],
+            "model": self._config["version"].split("|")[0],
             "manufacturer": "barneyman",
-            "sw_version": self._config["version"].split('|')[1],
-            "configuration_url": "http://"+self._config["ip"]
+            "sw_version": self._config["version"].split("|")[1],
+            "configuration_url": "http://" + self._config["ip"],
         }
-
-
 
 
 class BJFChildDeviceInfo:
-    def __init__(self, config, parent):
+    def __init__(self, config, mac, parent):
         self._config = config
-        self._parent=parent.device_info["identifiers"]
+        self._mac = mac
+        self._parent = parent.device_info["identifiers"]
 
     # https://developers.home-assistant.io/docs/device_registry_index/
     @property
@@ -160,41 +165,38 @@ class BJFChildDeviceInfo:
             },
             "name": self._config["name"],
             "manufacturer": "barneyman",
-            "model": self._config["version"].split('|')[0],
-            "sw_version": self._config["version"].split('|')[1],
-            "via_device": self._parent
+            "model": self._config["version"].split("|")[0],
+            "sw_version": self._config["version"].split("|")[1],
+            "via_device": self._parent,
         }
-
 
 
 class BJFFinder:
     def __init__(self, hass, hostname) -> None:
-        self._hass=hass
-        self._hostname=hostname
-        
+        self._hass = hass
+        self._hostname = hostname
+
     def getIPaddress(self):
 
         _LOGGER.debug("async_getIPaddress for {}".format(self._hostname))
 
-        entries=self._hass.config_entries.async_entries(DOMAIN)
+        entries = self._hass.config_entries.async_entries(DOMAIN)
 
         for eachEntry in entries:
 
             _LOGGER.debug("eachEntry {}".format(eachEntry))
 
-            myentries=eachEntry.data['Devices']
+            myentries = eachEntry.data["Devices"]
 
             _LOGGER.debug("myentries {}".format(myentries))
 
             for each in myentries:
-                if each["hostname"]==self._hostname:
+                if each["hostname"] == self._hostname:
                     _LOGGER.info("found {} for {}".format(each["ip"], self._hostname))
                     return each["ip"]
-                
+
         _LOGGER.info("found nothing for {}".format(self._hostname))
         return None
-        
-            
 
 
 # this can be reused by a single sensor
@@ -202,32 +204,23 @@ class BJFFinder:
 
 
 class BJFRestData(RestData, BJFFinder):
-    def __init__(
-        self,
-        hass,
-        hostname,
-        method,
-        auth,
-        headers,
-        data,
-        verify_ssl=False
-    ):
+    def __init__(self, hass, hostname, method, auth, headers, data, verify_ssl=False):
         RestData.__init__(
-            self, hass, method, None, auth, headers,None, data, verify_ssl
+            self, hass, method, None, auth, headers, None, data, verify_ssl
         )
 
-        BJFFinder.__init__(self,hass,hostname)
+        BJFFinder.__init__(self, hass, hostname)
 
         self._hass = hass
-        self._hostname=hostname
+        self._hostname = hostname
 
     def getUrl(self):
 
-        endip=self.getIPaddress()
-        if endip==None:
+        endip = self.getIPaddress()
+        if endip == None:
             return None
 
-        url="http://" + endip + "/json/state"        
+        url = "http://" + endip + "/json/state"
 
         _LOGGER.debug("url for {}".format(url))
 
@@ -235,25 +228,24 @@ class BJFRestData(RestData, BJFFinder):
 
     async def async_bjfupdate(self):
 
-        _LOGGER.debug("async_update for {} {}".format(self._hostname,self._verify_ssl))
-        #change _resource ** in the parent **
+        _LOGGER.debug("async_update for {} {}".format(self._hostname, self._verify_ssl))
+        # change _resource ** in the parent **
         # super(BJFRestData,self)._resource=self.getUrl()
-        self._resource=self.getUrl()
+        self._resource = self.getUrl()
 
         await RestData.async_update(self)
-
-
 
 
 class BJFListener:
     def __init__(self, transport, hass, hostname):
 
-        self._lastSubscribed=None
-        self._subscribeTimeoutMinutes=5
-        self._hass=hass
-        self._hostname=hostname
-
-        self._finder=BJFFinder(hass,hostname)
+        self._lastSubscribed = None
+        self._subscribeTimeoutMinutes = 5
+        self._hass = hass
+        self._hostname = hostname
+        self.entity_id = None
+        self._finder = BJFFinder(hass, hostname)
+        self._ordinal = 0
 
         # spin up a thread, tell it the udp
         if transport == "tcp":
@@ -266,7 +258,7 @@ class BJFListener:
             self._listenThread = None
             self._port = 8123
             _LOGGER.info("BJFListener called with http transport")
-        elif transport is None:            
+        elif transport is None:
             self._listenThread = None
             self._port = None
             _LOGGER.info("BJFListener called with none transport")
@@ -334,60 +326,77 @@ class BJFListener:
             self._runListener = True
             self._listenThread.start()
         else:
-            _LOGGER.info("async_added_to_hass %s No Transport Thread started", self.entity_id)
+            _LOGGER.info(
+                "async_added_to_hass %s No Transport Thread started", self.entity_id
+            )
 
     def subscribe(self, deviceType):
 
-        _LOGGER.info("Subscribing %s '%s' ",deviceType, self.entity_id,self._hostname)
+        _LOGGER.info(
+            "Subscribing %s '%s' @ %s", deviceType, self.entity_id, self._hostname
+        )
 
         # we do this periodicall, in case the remote device has been rebooted
         # and forgotten we love them
-        if self._lastSubscribed is None or ((time.time()-self._lastSubscribed)>self._subscribeTimeoutMinutes*60):
+        if self._lastSubscribed is None or (
+            (time.time() - self._lastSubscribed) > self._subscribeTimeoutMinutes * 60
+        ):
 
+            _LOGGER.info(
+                "Proceeding %s '%s' '%s'", deviceType, self.entity_id, self._hostname
+            )
 
             recipient = self.build_recipient(deviceType)
 
-            if recipient==None:
+            if recipient is None:
                 return
 
             # advise the sensor we're listening
             doPost(self._finder.getIPaddress(), "/json/listen", json.dumps(recipient))
 
-            self._lastSubscribed=time.time()
+            self._lastSubscribed = time.time()
 
         else:
             _LOGGER.info("subscribe ignored")
-
 
     async def async_subscribe(self, deviceType):
 
-        _LOGGER.info("AsyncSubscribing %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
+        _LOGGER.info(
+            "AsyncSubscribing %s '%s' @ '%s'",
+            deviceType,
+            self.entity_id,
+            self._hostname,
+        )
         # we do this periodicall, in case the remote device has been rebooted
         # and forgotten we love them
-        if self._lastSubscribed is None or ((time.time()-self._lastSubscribed)>self._subscribeTimeoutMinutes*60):
+        if self._lastSubscribed is None or (
+            (time.time() - self._lastSubscribed) > self._subscribeTimeoutMinutes * 60
+        ):
 
-            _LOGGER.info("Proceeding %s '%s' '%s'",deviceType, self.entity_id,self._hostname)
+            _LOGGER.info(
+                "Proceeding %s '%s' '%s'", deviceType, self.entity_id, self._hostname
+            )
 
             recipient = self.build_recipient(deviceType)
 
-            if recipient==None:
+            if recipient == None:
                 return
 
             # advise the sensor we're listening
-            async_doPost(self._finder.getIPaddress(), "/json/listen", json.dumps(recipient))
+            async_doPost(
+                self._finder.getIPaddress(), "/json/listen", json.dumps(recipient)
+            )
 
-            _LOGGER.info("Succeeded %s '%s' '%s'",deviceType, self.entity_id,self._host)
-
-            self._lastSubscribed=time.time()
+            self._lastSubscribed = time.time()
 
         else:
             _LOGGER.info("subscribe ignored")
 
-    def build_recipient(self,deviceType):
-        
+    def build_recipient(self, deviceType):
+
         if self.entity_id == None:
             return None
-        
+
         recipient = {}
         if self.getPort() is not None:
             recipient["port"] = self.getPort()
