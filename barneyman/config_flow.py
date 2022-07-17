@@ -5,7 +5,7 @@ from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers import config_entry_flow
 from .barneymanconst import BARNEYMAN_HOST, BARNEYMAN_CONFIG_ENTRY, BARNEYMAN_DEVICES, MDNS_HOSTNAME
 from .helpers import async_doExists
-
+import copy
 
 _LOGGER = logging.getLogger(__name__)
 
