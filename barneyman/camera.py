@@ -41,7 +41,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
         add_result = await add_bjf_camera(config_entry.data, async_add_devices, hass)
 
-        if add_result:
+        if add_result != True:
             _LOGGER.error("CAMERA async_setup_entry: %s FAILED", config_entry.entry_id)
 
         return add_result
@@ -52,7 +52,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     # scan for lights
     add_result = await async_scan_for(config_entry)
 
-    if add_result:
+    if add_result != True:
         _LOGGER.error("CAMERA async_setup_entry: %s FAILED", config_entry.entry_id)
 
     return add_result
