@@ -33,26 +33,23 @@ async def async_setup(hass, baseConfig):
 
     _LOGGER.debug("barneyman async_setup called %s", baseConfig)
 
-    myAuthToken=None
+    myAuthToken = None
     # only used if we're not using rest (which we are)
-    listeningPort=49152
+    listeningPort = 49152
     if DOMAIN in baseConfig:
         if AUTH_TOKEN in baseConfig[DOMAIN]:
-            myAuthToken=baseConfig[DOMAIN][AUTH_TOKEN]
+            myAuthToken = baseConfig[DOMAIN][AUTH_TOKEN]
             _LOGGER.debug("barneyman authtoken found")
         if LISTENING_PORT in baseConfig[DOMAIN]:
-            listeningPort=baseConfig[DOMAIN][LISTENING_PORT]
+            listeningPort = baseConfig[DOMAIN][LISTENING_PORT]
             _LOGGER.debug("barneyman port %d", listeningPort)
-
 
     # create my 'i've created these' array
     hass.data[DOMAIN] = {
         AUTH_TOKEN: myAuthToken,
         LISTENING_PORT: listeningPort,
-        BARNEYMAN_DEVICES_SEEN: []
+        BARNEYMAN_DEVICES_SEEN: [],
     }
-
-
 
     return True
 
@@ -70,28 +67,27 @@ async def async_setup_entry(hass, entry):
     if entry.title != BARNEYMAN_CONFIG_ENTRY:
 
         if hass.config_entries.async_get_entry(entry.entry_id) is not None:
-            _LOGGER.error("Old config entry - removing {}".format(entry.title))
+            _LOGGER.error("Old config entry - removing %s", (entry.title))
             await hass.config_entries.async_remove(entry.entry_id)
             return False
-
 
     # then forward this to all the platforms
     _LOGGER.info("forwarding to platforms %s %s", entry.title, entry.data)
 
     # use the current stored config, some things may not respond in time
-    hass.config_entries.async_setup_platforms(entry, [DEVICES_LIGHT, DEVICES_SENSOR, DEVICES_CAMERA])
-
+    hass.config_entries.async_setup_platforms(
+        entry, [DEVICES_LIGHT, DEVICES_SENSOR, DEVICES_CAMERA]
+    )
 
     return True
 
 
 async def async_remove_entry(hass, entry):
+    # pylint: disable=unused-argument
     """Handle removal of an entry."""
     _LOGGER.info("async_remove_entry")
 
     # TODO - this should remove all the entities?
 
 
-
 #############
-

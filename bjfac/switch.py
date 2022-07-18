@@ -1,8 +1,8 @@
 import logging
 
-#import voluptuous as vol
-#import json
-#import http.client
+# import voluptuous as vol
+# import json
+# import http.client
 
 import time
 
@@ -10,32 +10,33 @@ import time
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import DEVICE_DEFAULT_NAME
 
-#import homeassistant.helpers.config_validation as cv
+# import homeassistant.helpers.config_validation as cv
 
 # Home Assistant depends on 3rd party packages for API specific code.
 # REQUIREMENTS = ['awesome_lights==1.2.3']
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN="bjfac"
+DOMAIN = "bjfac"
 
 # Validation of the user's configuration
-#PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
+# PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 #    vol.Required(CONF_HOST): cv.string,
 #    vol.Optional(CONF_PORT): cv.port
-#})
-
-
+# })
 
 
 def setup_platform(hass, config, add_devices_callback, discovery_info=None):
-    """Set up the demo switches."""
-    add_devices_callback([
-        #DemoSwitch('Decorative Lights', True, None, True),
-        #heaterSwitch('Heater', False, 'mdi:air-conditioner', False),
-        airconSwitch('AirCon', False, 'mdi:air-conditioner', False)
-    ])
+    # pylint: disable=unused-argument
 
+    """Set up the demo switches."""
+    add_devices_callback(
+        [
+            # DemoSwitch('Decorative Lights', True, None, True),
+            # heaterSwitch('Heater', False, 'mdi:air-conditioner', False),
+            airconSwitch("AirCon", False, "mdi:air-conditioner", False)
+        ]
+    )
 
 
 class irSwitch(SwitchEntity):
@@ -48,13 +49,13 @@ class irSwitch(SwitchEntity):
         self._icon = icon
         self._assumed = assumed
         # this happens when the device is added ...
-        #self.hass=hass
+        # self.hass=hass
 
     @property
     def is_on(self) -> bool:
         """Return True if entity is on."""
         return self._state
-        
+
     @property
     def should_poll(self):
         """No polling needed for a demo switch."""
@@ -86,12 +87,7 @@ class irSwitch(SwitchEntity):
         """Return the today total energy usage in kWh."""
         return 15
 
-    @property
-    def is_on(self):
-        """Return true if switch is on."""
-        return self._state
-
-    #def turn_on(self, **kwargs):
+    # def turn_on(self, **kwargs):
     #    """Turn the switch on."""
     #    self._state = True
     #    service_data={ "remote":"LG20bit","command":"heatOn20" }
@@ -105,40 +101,40 @@ class irSwitch(SwitchEntity):
     def turn_off(self, **kwargs):
         """Turn the device off."""
         self._state = False
-        service_data={ "remote":"LG20bit","command":"all_off" }
-        self.hass.services.call('bjfirc', 'send', service_data)
+        service_data = {"remote": "LG20bit", "command": "all_off"}
+        self.hass.services.call("bjfirc", "send", service_data)
         # ONLY because we are Not Poll
         self.schedule_update_ha_state()
 
-class heaterSwitch(SwitchEntity):
 
+class heaterSwitch(irSwitch):
     def __init__(self, name, state, icon, assumed):
-        irSwitch.__init__(self,name,state,icon,assumed)
+        irSwitch.__init__(self, name, state, icon, assumed)
+        self._state = None
 
     def turn_on(self, **kwargs):
         """Turn the switch on."""
         self._state = True
-        service_data={ "remote":"LG20bit","command":"heatOn20" }
-        self.hass.services.call('bjfirc', 'send', service_data)
+        service_data = {"remote": "LG20bit", "command": "heatOn20"}
+        self.hass.services.call("bjfirc", "send", service_data)
         time.sleep(2)
-        service_data={ "remote":"LGair","command":"swing_toggle" }
-        self.hass.services.call('bjfirc', 'send', service_data)
+        service_data = {"remote": "LGair", "command": "swing_toggle"}
+        self.hass.services.call("bjfirc", "send", service_data)
         # ONLY because we are Not Poll
         self.schedule_update_ha_state()
 
 
 class airconSwitch(irSwitch):
-
     def __init__(self, name, state, icon, assumed):
-        irSwitch.__init__(self,name,state,icon,assumed)
+        irSwitch.__init__(self, name, state, icon, assumed)
 
     def turn_on(self, **kwargs):
         """Turn the switch on."""
         self._state = True
-        service_data={ "remote":"LG20bit","command":"coolOn18" }
-        self.hass.services.call('bjfirc', 'send', service_data)
+        service_data = {"remote": "LG20bit", "command": "coolOn18"}
+        self.hass.services.call("bjfirc", "send", service_data)
         time.sleep(2)
-        service_data={ "remote":"LGair","command":"swing_toggle" }
-        self.hass.services.call('bjfirc', 'send', service_data)
+        service_data = {"remote": "LGair", "command": "swing_toggle"}
+        self.hass.services.call("bjfirc", "send", service_data)
         # ONLY because we are Not Poll
         self.schedule_update_ha_state()
