@@ -13,7 +13,7 @@ import async_timeout
 # from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.components.camera import Camera
 from .barneymanconst import BARNEYMAN_DEVICES, BARNEYMAN_DEVICES_SEEN, DEVICES_CAMERA
-from .helpers import async_doQuery, BJFDeviceInfo
+from .helpers import async_do_query, BJFDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,32 +34,32 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     async def async_scan_for(config_entry):
 
-        addResult = await addBJFcamera(config_entry.data, async_add_devices, hass)
+        add_result = await add_bjf_camera(config_entry.data, async_add_devices, hass)
 
-        if addResult != True:
+        if add_result:
             _LOGGER.error("CAMERA async_setup_entry: %s FAILED", config_entry.entry_id)
 
-        return addResult
+        return add_result
 
     # add a listener to the config entry
     config_entry.add_update_listener(async_update_options)
 
     # scan for lights
-    addResult = await async_scan_for(config_entry)
+    add_result = await async_scan_for(config_entry)
 
-    if addResult != True:
+    if add_result:
         _LOGGER.error("CAMERA async_setup_entry: %s FAILED", config_entry.entry_id)
 
-    return addResult
+    return add_result
 
 
 wip = []
 
 
-async def addBJFcamera(data, add_devices, hass):
-    _LOGGER.info("addBJFcamera querying %s", data)
+async def add_bjf_camera(data, add_devices, hass):
+    _LOGGER.info("add_bjf_camera querying %s", data)
 
-    camerasToAdd = []
+    cameras_to_add = []
 
     if BARNEYMAN_DEVICES not in data:
         return False
@@ -85,47 +85,47 @@ async def addBJFcamera(data, add_devices, hass):
 
         wip.append(hostname)
 
-        config = await async_doQuery(host, "/json/config", True)
+        config = await async_do_query(host, "/json/config", True)
 
-        if config != None:
+        if config is not None:
 
             mac = config["mac"]
 
             # built early, in case it's shared
             url = "http://" + config["ip"] + "/camera?cam="
 
-            friendlyName = (
+            friendly_name = (
                 config["friendlyName"] if "friendlyName" in config else config["name"]
             )
 
             # add a bunch of cameras
             if "cameraConfig" in config:
-                for eachCamera in config["cameraConfig"]:
+                for each_camera in config["cameraConfig"]:
 
                     potential = None
 
                     _LOGGER.info("Potential BJFRestSensor")
 
-                    camNumber = eachCamera["camera"]
+                    cam_number = each_camera["camera"]
 
                     potential = BJFEspCamera(
                         hass,
                         mac,
                         hostname,
                         # entity name - +1 for the cosmetic name - that's confusing!
-                        friendlyName
+                        friendly_name
                         + " "
-                        + eachCamera["name"]
+                        + each_camera["name"]
                         + " "
-                        + str(camNumber + 1),
-                        url + str(camNumber),
-                        camNumber,
+                        + str(cam_number + 1),
+                        url + str(cam_number),
+                        cam_number,
                         config,
                     )
 
                     if potential is not None:
                         _LOGGER.info("Adding camera %s", potential.unique_id)
-                        camerasToAdd.append(potential)
+                        cameras_to_add.append(potential)
         else:
             _LOGGER.error(
                 "Failed to query %s at onboarding - device not added", hostname
@@ -136,7 +136,7 @@ async def addBJFcamera(data, add_devices, hass):
         wip.remove(hostname)
 
     if add_devices is not None:
-        add_devices(camerasToAdd)
+        add_devices(cameras_to_add)
         return True
 
     return False
@@ -151,7 +151,7 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
         hostname,
         name,
         camUrl,
-        camNumber,
+        cam_number,
         config,
     ):
         # pylint: disable=unused-argument
@@ -159,11 +159,11 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
         Camera.__init__(self)
         BJFDeviceInfo.__init__(self, config, mac)
 
-        self._unique_id = mac + "_camera_" + str(camNumber)
+        self._unique_id = mac + "_camera_" + str(cam_number)
         self._hostname = hostname
         self._name = name
         self._frame_interval = 5
-        self._camUrl = camUrl
+        self._cam_url = camUrl
         self._last_image = None
         self._incommserror = False
         self._last_url = None
@@ -209,13 +209,11 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
     async def async_camera_image(self, width=None, height=None):
         """Return a still image response from the camera."""
 
-        # if self._camUrl == self._last_url and self._limit_refetch:
-        #     return self._last_image
 
         try:
             websession = async_get_clientsession(self.hass, verify_ssl=False)
             with async_timeout.timeout(10):
-                response = await websession.get(self._camUrl)
+                response = await websession.get(self._cam_url)
             self._last_image = await response.read()
             if self._incommserror:
                 _LOGGER.error("%s no longer in comms error", self._name)
@@ -231,5 +229,5 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
                 self._incommserror = True
             return self._last_image
 
-        self._last_url = self._camUrl
+        self._last_url = self._cam_url
         return self._last_image

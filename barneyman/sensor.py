@@ -1,27 +1,19 @@
 import logging
 import json
-import voluptuous as vol
-from datetime import datetime, timedelta
+from datetime import timedelta
 from homeassistant.helpers.template import Template
 from homeassistant.components.rest.sensor import RestSensor
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import BARNEYMAN_DEVICES, BARNEYMAN_DEVICES_SEEN, DEVICES_SENSOR
 
 from homeassistant.core import callback
 
 from .helpers import (
-    doQuery,
-    doPost,
     BJFDeviceInfo,
     BJFRestData,
     BJFListener,
-    async_doQuery,
+    async_do_query,
     BJFFinder,
 )
-from typing import Any, Dict, List, Optional
-
-from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.components.binary_sensor import BinarySensorEntity
 
 
@@ -35,32 +27,33 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("SENSOR async_setup_entry: %s", config_entry.data)
 
     async def async_update_options(hass, entry) -> None:
+        # pylint: disable=unused-argument
 
-        _LOGGER.info("async_update_options {}".format(entry.title))
+        _LOGGER.info("async_update_options %s", (entry.title))
         # reload me
         await async_scan_for(config_entry)
 
     async def async_scan_for(config_entry):
 
-        _LOGGER.debug("async_scan_for addBJFsensor {}".format(config_entry.data))
-        addResult = await addBJFsensor(config_entry.data, async_add_devices, hass)
+        _LOGGER.debug("async_scan_for addBJFsensor %s", (config_entry.data))
+        add_result = await addBJFsensor(config_entry.data, async_add_devices, hass)
 
-        if addResult != True:
+        if add_result is not True:
             _LOGGER.error("SENSOR async_setup_entry: %s FAILED", config_entry.entry_id)
 
-        return addResult
+        return add_result
 
     # add a listener to the config entry
-    _LOGGER.debug("adding listener for {}".format(config_entry.title))
+    _LOGGER.debug("adding listener for %s", (config_entry.title))
     config_entry.add_update_listener(async_update_options)
 
     # scan for lights
-    _LOGGER.debug("first scan {}".format(config_entry.title))
-    addResult = await async_scan_for(config_entry)
+    _LOGGER.debug("first scan %s", (config_entry.title))
+    add_result = await async_scan_for(config_entry)
 
     # await hass.async_add_executor_job(addBJFsensor,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
 
-    return addResult
+    return add_result
 
 
 from homeassistant.helpers.update_coordinator import (
@@ -88,7 +81,7 @@ async def addBJFsensor(data, add_devices, hass):
             continue
 
         if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
-            _LOGGER.info("device {} has already been added".format(hostname))
+            _LOGGER.info("device %s has already been added", (hostname))
             continue
 
         # optimisation, if they have a pltforms property, bail early on that
@@ -101,8 +94,7 @@ async def addBJFsensor(data, add_devices, hass):
         _LOGGER.info("addBJFsensor querying %s @ %s", hostname, host)
         wip.append(hostname)
 
-        # config = doQuery(hostname, "/json/config", True)
-        config = await async_doQuery(host, "/json/config", True)
+        config = await async_do_query(host, "/json/config", True)
 
         if config != None:
 
@@ -111,7 +103,7 @@ async def addBJFsensor(data, add_devices, hass):
             # built early, in case it's shared
             rest = BJFRestData(hass, hostname, "GET", None, None, None)
 
-            friendlyName = (
+            friendly_name = (
                 config["friendlyName"] if "friendlyName" in config else config["name"]
             )
 
@@ -119,7 +111,7 @@ async def addBJFsensor(data, add_devices, hass):
             coord = DataUpdateCoordinator(
                 hass,
                 _LOGGER,
-                name=friendlyName + "_DUC",
+                name=friendly_name + "_DUC",
                 update_method=rest.async_bjfupdate,
                 update_interval=timedelta(seconds=10),
             )
@@ -160,7 +152,7 @@ async def addBJFsensor(data, add_devices, hass):
                                 hostname,
                                 rest,
                                 # entity name
-                                friendlyName
+                                friendly_name
                                 + " "
                                 + eachSensor["name"]
                                 + " "
@@ -202,7 +194,7 @@ async def addBJFsensor(data, add_devices, hass):
                                 hostname,
                                 rest,
                                 # entity name
-                                friendlyName
+                                friendly_name
                                 + " "
                                 + eachSensor["name"]
                                 + " "
@@ -216,7 +208,7 @@ async def addBJFsensor(data, add_devices, hass):
                             )
 
                         if potential is not None:
-                            _LOGGER.info("Adding sensor %s", potential._unique_id)
+                            _LOGGER.info("Adding sensor %s", potential.unique_id)
                             sensorsToAdd.append(potential)
 
                             hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN].append(hostname)
@@ -249,14 +241,14 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
         hostname,
         rest,
         name,
-        deviceType,
+        device_type,
         unit,
         jsonSensorQuery,
         ordinal,
         element,
         config,
     ):
-        _LOGGER.info("Creating sensor.'{}' - '{}'".format(name, jsonSensorQuery))
+        _LOGGER.info("Creating sensor.'%s' - '%s'", name, jsonSensorQuery)
 
         BJFFinder.__init__(self, hass, hostname)
 
@@ -282,7 +274,7 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
             rest,
             name,
             unit,
-            deviceType,
+            device_type,
             "measurement",
             value_template=jsonSensorQuery,
             json_attrs=None,
@@ -322,9 +314,9 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
         hostname,
         rest,
         name,
-        deviceType,
+        device_type,
         unit,
-        json,
+        jsonData,
         ordinal,
         element,
         config,
@@ -337,9 +329,9 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
             hostname,
             rest,
             name,
-            deviceType,
+            device_type,
             unit,
-            json,
+            jsonData,
             ordinal,
             element,
             config,
@@ -351,7 +343,7 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
         self._hass = hass
         self._ordinal = ordinal
         self._hostname = hostname
-        self._deviceClass = deviceType
+        self._deviceClass = device_type
 
         # # and subscribe for data updates
         # self.async_on_remove(
@@ -361,7 +353,7 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
         self._is_on = None
 
     # sent from an announcer
-    def HandleIncomingPacket(self, data):
+    def handle_incoming_packet(self, data):
         payload = json.loads(data.decode("utf-8"))
         _LOGGER.debug(payload)
         self._is_on = payload["state"]
@@ -374,11 +366,11 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
         _LOGGER.debug("is_on called %s state %s ", self.entity_id, self._state)
         return self._is_on
 
-    @property
-    def state(self):
-        """Return the state of the binary sensor."""
-        _LOGGER.debug("state called %s state %s ", self.entity_id, self._state)
-        return self._is_on  # STATE_ON if self._is_on==True else STATE_OFF
+    # @property
+    # def state(self):
+    #     """Return the state of the binary sensor."""
+    #     _LOGGER.debug("state called %s state %s ", self.entity_id, self._state)
+    #     return self._is_on  # STATE_ON if self._is_on==True else STATE_OFF
 
     @property
     def device_class(self):
@@ -397,9 +389,7 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
             self.async_write_ha_state()
 
         _LOGGER.debug(
-            "Got {} from {} using {}".format(
-                self._state, self.rest.data, self._value_template
-            )
+            "Got %s from %s using %s", self._state, self.rest.data, self._value_template
         )
         # work out my on state (._state is provided by the restsensor)
         self._is_on = self._state

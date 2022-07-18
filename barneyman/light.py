@@ -5,11 +5,8 @@ import asyncio
 
 # Import the device class from the component that you want to support
 
-from datetime import datetime, timedelta
-from homeassistant.const import CONF_FILE_PATH
+from datetime import timedelta
 import homeassistant.helpers.config_validation as cv
-import homeassistant.util.color as color_util
-from homeassistant.helpers.event import async_track_time_interval
 from .barneymanconst import (
     BARNEYMAN_HOST,
     BARNEYMAN_DEVICES,
@@ -17,12 +14,11 @@ from .barneymanconst import (
     DEVICES_LIGHT,
 )
 from .helpers import (
-    doQuery,
     BJFDeviceInfo,
     BJFRestData,
     BJFListener,
-    doPost,
-    async_doQuery,
+    do_post,
+    async_do_query,
     BJFFinder,
 )
 
@@ -31,17 +27,7 @@ from homeassistant.core import callback
 
 
 from homeassistant.components.light import (
-    ATTR_BRIGHTNESS,
-    ATTR_COLOR_TEMP,
-    ATTR_EFFECT,
-    ATTR_HS_COLOR,
-    ATTR_WHITE_VALUE,
     PLATFORM_SCHEMA,
-    SUPPORT_BRIGHTNESS,
-    SUPPORT_COLOR_TEMP,
-    SUPPORT_EFFECT,
-    SUPPORT_COLOR,
-    SUPPORT_WHITE_VALUE,
     LightEntity,
 )
 
@@ -59,8 +45,6 @@ CONF_DEVICES = "devices"
 # Validation of the user's configuration
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({vol.Optional(CONF_DEVICES): cv.ensure_list})
 
-
-from homeassistant.helpers import discovery
 
 # this gets called if you're a platform under a component
 def setup_platform(hass, config, add_devices, discovery_info=None):
@@ -89,51 +73,56 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     else:
         _LOGGER.warning("no quoted barneyman")
 
-    def device_discovered(service, info):
-        """Called when a bjflights device has been discovered."""
-        _LOGGER.debug(
-            "MDNS Discovered a new %s device: %s", service, info[BARNEYMAN_HOST]
-        )
-        addBJFlight(info[BARNEYMAN_HOST], add_devices, hass)
+    # def device_discovered(service, info):
+    #     """Called when a bjflights device has been discovered."""
+    #     _LOGGER.debug(
+    #         "MDNS Discovered a new %s device: %s", service, info[BARNEYMAN_HOST]
+    #     )
+    #     addBJFlight(info[BARNEYMAN_HOST], add_devices, hass)
 
 
 async def async_remove_entry(hass, entry):
-    """Handle removal of an entry."""
+    # pylint: disable=unused-argument
+
+    # """Handle removal of an entry."""
     _LOGGER.info("LIGHT async_remove_entry")
 
 
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
+    # pylint: disable=unused-argument
     _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry.data)
 
     async def async_update_options(hass, entry) -> None:
+        # pylint: disable=unused-argument
 
         # reload me
-        _LOGGER.info("async_update_options {}".format(entry.title))
+        _LOGGER.info("async_update_options %s", (entry.title))
         await async_scan_for(entry)
 
-        """Update options."""
+        # """Update options."""
 
     async def async_scan_for(config_entry):
 
-        addResult = await addBJFlight(config_entry.data, async_add_devices, hass)
+        add_result = await addBJFlight(config_entry.data, async_add_devices, hass)
 
-        if addResult != True:
+        if add_result != True:
             _LOGGER.error("LIGHT async_setup_entry: %s FAILED", config_entry.entry_id)
 
-        return addResult
+        return add_result
 
     # add a listener to the config entry
     config_entry.add_update_listener(async_update_options)
 
     # scan for lights
-    addResult = await async_scan_for(config_entry)
+    add_result = await async_scan_for(config_entry)
 
-    return addResult
+    return add_result
 
 
 # doesn't appear to be called
 async def async_setup(hass, config_entry):
+    # pylint: disable=unused-argument
     _LOGGER.debug("LIGHT async_setup: %s", config_entry)
 
     # lets hunt for our items
@@ -179,7 +168,7 @@ async def addBJFlight(data, add_devices, hass):
         _LOGGER.info("querying %s @ %s", hostname, host)
         wip.append(hostname)
 
-        config = await async_doQuery(host, "/json/config", True)
+        config = await async_do_query(host, "/json/config", True)
 
         if config != None:
 
@@ -258,13 +247,14 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
         self._ordinal = ordinal
         self._rest = rest
         self._hass = hass
+        self._is_on = False
 
         self._finder = BJFFinder(hass, hostname)
 
         # and subscribe for data updates
         self.async_on_remove(coord.async_add_listener(self.parseData))
 
-    def HandleIncomingPacket(self, data):
+    def handle_incoming_packet(self, data):
 
         _LOGGER.warning("Publish from %s", self._hostname)
 
@@ -299,8 +289,9 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
         # self._light.brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         # self._light.turn_on()
 
-        doPost(
-            self._finder.getIPaddress(), "/button?action=on&port=" + str(self._ordinal)
+        do_post(
+            self._finder.get_ip_address(),
+            "/button?action=on&port=" + str(self._ordinal),
         )
         asyncio.run_coroutine_threadsafe(
             self.coordinator.async_refresh(), self.hass.loop
@@ -309,8 +300,9 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
     def turn_off(self, **kwargs):
         """Instruct the light to turn off."""
 
-        doPost(
-            self._finder.getIPaddress(), "/button?action=off&port=" + str(self._ordinal)
+        do_post(
+            self._finder.get_ip_address(),
+            "/button?action=off&port=" + str(self._ordinal),
         )
         # and reset the cache
         asyncio.run_coroutine_threadsafe(
@@ -320,7 +312,7 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
     @callback
     def parseData(self):
 
-        _LOGGER.info("light {} parseData ha been called!".format(self._hostname))
+        _LOGGER.info("light %s parseData ha been called!", (self._hostname))
 
         if self._hass is not None:
             self._hass.add_job(self.subscribe, "light")
@@ -431,7 +423,7 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
 #                 r=rgb[0], g=rgb[1], b=rgb[2], effect=self._effect
 #             )
 #             _LOGGER.info("querying %s", query)
-#             doPost(self._hostname, query)
+#             do_post(self._hostname, query)
 #         # else:
 #         #    self._light.command('on')
 

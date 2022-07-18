@@ -1,13 +1,13 @@
 import logging
 import http.client
 import json
+import threading
+import socket
+import time
 from homeassistant.components.rest.data import RestData
 
 # from datetime import datetime, timedelta
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-import threading
-import socket
-import time
 import httpx
 from sqlalchemy import false
 from .barneymanconst import LISTENING_PORT, AUTH_TOKEN
@@ -19,94 +19,94 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "barneyman"
 
 
-def doExists(hostname):
-    jsonRet = doQuery(hostname, "/json/config", True, timeout=2)
+def do_exists(hostname):
+    json_ret = do_query(hostname, "/json/config", True, timeout=2)
 
-    _LOGGER.info("doExists %s ", hostname)
+    _LOGGER.info("do_exists %s ", hostname)
 
-    if jsonRet is None:
+    if json_ret is None:
         return False
 
-    if "version" not in jsonRet:
-        return False
-
-    return True
-
-
-async def async_doExists(hostname):
-    jsonRet = await async_doQuery(hostname, "/json/config", True, timeout=2)
-
-    _LOGGER.info("doExists %s ", hostname)
-
-    if jsonRet is None:
-        return False
-
-    if "version" not in jsonRet:
+    if "version" not in json_ret:
         return False
 
     return True
 
 
-def doQuery(
-    hostname, url, returnJson=False, httpmethod="GET", timeout=10, jsonBody=None
+async def async_do_exists(hostname):
+    json_ret = await async_do_query(hostname, "/json/config", True, timeout=2)
+
+    _LOGGER.info("do_exists %s ", hostname)
+
+    if json_ret is None:
+        return False
+
+    if "version" not in json_ret:
+        return False
+
+    return True
+
+
+def do_query(
+    hostname, url, return_json=False, httpmethod="GET", timeout=10, json_body=None
 ):
 
     try:
-        _LOGGER.info("doQuery %s%s %s", hostname, url, httpmethod)
+        _LOGGER.info("do_query %s%s %s", hostname, url, httpmethod)
         conn = http.client.HTTPConnection(hostname, timeout=timeout)
-        conn.request(url=url, method=httpmethod, body=jsonBody)
-        r = conn.getresponse()
-        if returnJson == True:
-            jsonDone = r.read().decode("utf-8")
-            _LOGGER.debug(jsonDone)
-            r.close()
+        conn.request(url=url, method=httpmethod, body=json_body)
+        response = conn.getresponse()
+        if return_json:
+            json_done = response.read().decode("utf-8")
+            _LOGGER.debug(json_done)
+            response.close()
             conn.close()
-            return json.loads(jsonDone)
-        r.close()
+            return json.loads(json_done)
+        response.close()
         conn.close()
         return True
-    except Exception as e:
-        _LOGGER.error("barneyman doQuery exception %s %s %s", e, hostname, url)
+    except Exception as exception:
+        _LOGGER.error("barneyman do_query exception %s %s %s", exception, hostname, url)
 
     return None
 
 
-def doPost(
-    hostname, url, jsonBody=None, returnJson=False, httpmethod="POST", timeout=5
+def do_post(
+    hostname, url, json_body=None, return_json=False, httpmethod="POST", timeout=5
 ):
-    return doQuery(hostname, url, returnJson, httpmethod, timeout, jsonBody)
+    return do_query(hostname, url, return_json, httpmethod, timeout, json_body)
 
 
-async def async_doPost(
-    hostname, url, jsonBody=None, returnJson=False, httpmethod="POST", timeout=5
+async def async_do_post(
+    hostname, url, json_body=None, return_json=False, httpmethod="POST", timeout=5
 ):
-    return async_doQuery(hostname, url, returnJson, httpmethod, timeout, jsonBody)
+    return async_do_query(hostname, url, return_json, httpmethod, timeout, json_body)
 
 
-async def async_doQuery(
-    hostname, url, returnJson=False, httpmethod="GET", timeout=30, jsonBody=None
+async def async_do_query(
+    hostname, url, return_json=False, httpmethod="GET", timeout=30, json_body=None
 ):
     #     """Get the latest data from REST service with provided method."""
 
-    builtUrl = "http://" + hostname + url
+    built_url = "http://" + hostname + url
 
-    _LOGGER.info("barneyman async_doQuery to %s", builtUrl)
+    _LOGGER.info("barneyman async_do_query to %s", built_url)
 
     try:
 
         async with httpx.AsyncClient() as client:
             response = await client.request(
                 httpmethod,
-                builtUrl,
+                built_url,
                 headers=None,
                 params=None,
                 auth=None,
-                data=jsonBody,
+                data=json_body,
                 timeout=timeout,
             )
             response.raise_for_status()
-            if returnJson:
-                _LOGGER.info("barneyman async_doQuery returned  %s", response.text)
+            if return_json:
+                _LOGGER.info("barneyman async_do_query returned  %s", response.text)
                 return json.loads(response.text)
             else:
                 return True
@@ -121,10 +121,10 @@ async def async_doQuery(
     except httpx.RequestError as exc:
         _LOGGER.error("An error occurred while requesting %s.", exc.request.url)
 
-    except Exception as e:
+    except Exception as exception:
         _LOGGER.error(
-            "barneyman async_doQuery exception '%s' host '%s' url '%s'",
-            str(e),
+            "barneyman async_do_query exception '%s' host '%s' url '%s'",
+            str(exception),
             hostname,
             url,
         )
@@ -180,17 +180,17 @@ class BJFFinder:
         self._hass = hass
         self._hostname = hostname
 
-    def getIPaddress(self):
+    def get_ip_address(self):
 
-        _LOGGER.debug("async_getIPaddress for %s", (self._hostname))
+        _LOGGER.debug("async_get_ip_address for %s", (self._hostname))
 
         entries = self._hass.config_entries.async_entries(DOMAIN)
 
-        for eachEntry in entries:
+        for each_entry in entries:
 
-            _LOGGER.debug("eachEntry %s", (eachEntry))
+            _LOGGER.debug("each_entry %s", (each_entry))
 
-            myentries = eachEntry.data["Devices"]
+            myentries = each_entry.data["Devices"]
 
             _LOGGER.debug("myentries %s", (myentries))
 
@@ -218,10 +218,10 @@ class BJFRestData(RestData, BJFFinder):
         self._hass = hass
         self._hostname = hostname
 
-    def getUrl(self):
+    def get_url(self):
 
-        endip = self.getIPaddress()
-        if endip == None:
+        endip = self.get_ip_address()
+        if endip is None:
             return None
 
         url = "http://" + endip + "/json/state"
@@ -234,8 +234,8 @@ class BJFRestData(RestData, BJFFinder):
 
         _LOGGER.debug("async_update for %s %s", self._hostname, str(self._verify_ssl))
         # change _resource ** in the parent **
-        # super(BJFRestData,self)._resource=self.getUrl()
-        self._resource = self.getUrl()
+        # super(BJFRestData,self)._resource=self.get_url()
+        self._resource = self.get_url()
 
         await RestData.async_update(self)
 
@@ -243,59 +243,59 @@ class BJFRestData(RestData, BJFFinder):
 class BJFListener:
     def __init__(self, transport, hass, hostname):
 
-        self._lastSubscribed = None
-        self._subscribeTimeoutMinutes = 5
+        self._last_subscribed = None
+        self._subscribe_timeout_minutes = 5
         self._hass = hass
         self._hostname = hostname
         self.entity_id = None
         self._finder = BJFFinder(hass, hostname)
         self._ordinal = 0
-        self._runListener = false
+        self._run_listener = false
 
         # spin up a thread, tell it the udp
         if transport == "tcp":
-            self._listenThread = threading.Thread(target=self.tcpListener)
+            self._listen_thread = threading.Thread(target=self.tcp_listener)
             _LOGGER.info("BJFListener called with tcp transport")
         elif transport == "udp":
-            self._listenThread = threading.Thread(target=self.udpListener)
+            self._listen_thread = threading.Thread(target=self.udp_listener)
             _LOGGER.info("BJFListener called with udp transport")
         elif transport == "rest":
-            self._listenThread = None
+            self._listen_thread = None
             self._port = 8123
             _LOGGER.info("BJFListener called with http transport")
         elif transport is None:
-            self._listenThread = None
+            self._listen_thread = None
             self._port = None
             _LOGGER.info("BJFListener called with none transport")
         else:
             self._port = None
-            self._listenThread = None
+            self._listen_thread = None
             _LOGGER.error("BJFListener called with unknown transport %s", transport)
 
         self._transport = transport
 
         # get the available port
-        if self._listenThread is not None:
+        if self._listen_thread is not None:
             self._port = hass.data[DOMAIN][LISTENING_PORT]
             # and inc it
             hass.data[DOMAIN][LISTENING_PORT] = self._port + 1
 
-    def udpListener(self):
-        _LOGGER.info("udpListener started port %d ...", self._port)
+    def udp_listener(self):
+        _LOGGER.info("udp_listener started port %d ...", self._port)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # yes, a tuple '' is 'all local addrs'
         sock.bind(("", self._port))
 
-        while self._runListener:
+        while self._run_listener:
             data, address = sock.recvfrom(1024)  # pylint: disable=unused-variable
             # buffer size is 1024 bytes
 
-            self.HandleIncomingPacket(data)
+            self.handle_incoming_packet(data)
 
-    def tcpListener(self):
+    def tcp_listener(self):
 
-        _LOGGER.info("tcpListener started port %d ...", self._port)
+        _LOGGER.info("tcp_listener started port %d ...", self._port)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # yes, a tuple '' is 'all local addrs'
@@ -303,7 +303,7 @@ class BJFListener:
 
         sock.listen(2)
 
-        while self._runListener:
+        while self._run_listener:
 
             try:
                 (
@@ -318,99 +318,101 @@ class BJFListener:
 
                 clientsocket.close()
 
-                self.HandleIncomingPacket(data)
+                self.handle_incoming_packet(data)
 
-            except Exception as e:
-                _LOGGER.warning("tcpListener exception %s", e)
+            except Exception as exception:
+                _LOGGER.warning("tcp_listener exception %s", exception)
 
-    def HandleIncomingPacket(self, data):
+    def handle_incoming_packet(self, data):
         raise NotImplementedError()
 
-    def getPort(self):
+    def get_port(self):
         return self._port
 
     async def async_added_to_hass(self):
         _LOGGER.info("async_added_to_hass %s", self.entity_id)
         # we don't get an entity id until we're added, so don't start the thread until we are
-        if self._listenThread is not None:
-            self._runListener = True
-            self._listenThread.start()
+        if self._listen_thread is not None:
+            self._run_listener = True
+            self._listen_thread.start()
         else:
             _LOGGER.info(
                 "async_added_to_hass %s No Transport Thread started", self.entity_id
             )
 
-    def subscribe(self, deviceType):
+    def subscribe(self, device_type):
 
         _LOGGER.info(
-            "Subscribing %s '%s' @ %s", deviceType, self.entity_id, self._hostname
+            "Subscribing %s '%s' @ %s", device_type, self.entity_id, self._hostname
         )
 
         # we do this periodicall, in case the remote device has been rebooted
         # and forgotten we love them
-        if self._lastSubscribed is None or (
-            (time.time() - self._lastSubscribed) > self._subscribeTimeoutMinutes * 60
+        if self._last_subscribed is None or (
+            (time.time() - self._last_subscribed) > self._subscribe_timeout_minutes * 60
         ):
 
             _LOGGER.info(
-                "Proceeding %s '%s' '%s'", deviceType, self.entity_id, self._hostname
+                "Proceeding %s '%s' '%s'", device_type, self.entity_id, self._hostname
             )
 
-            recipient = self.build_recipient(deviceType)
+            recipient = self.build_recipient(device_type)
 
             if recipient is None:
                 return
 
             # advise the sensor we're listening
-            doPost(self._finder.getIPaddress(), "/json/listen", json.dumps(recipient))
+            do_post(
+                self._finder.get_ip_address(), "/json/listen", json.dumps(recipient)
+            )
 
-            self._lastSubscribed = time.time()
+            self._last_subscribed = time.time()
 
         else:
             _LOGGER.info("subscribe ignored")
 
-    async def async_subscribe(self, deviceType):
+    async def async_subscribe(self, device_type):
 
         _LOGGER.info(
             "AsyncSubscribing %s '%s' @ '%s'",
-            deviceType,
+            device_type,
             self.entity_id,
             self._hostname,
         )
         # we do this periodicall, in case the remote device has been rebooted
         # and forgotten we love them
-        if self._lastSubscribed is None or (
-            (time.time() - self._lastSubscribed) > self._subscribeTimeoutMinutes * 60
+        if self._last_subscribed is None or (
+            (time.time() - self._last_subscribed) > self._subscribe_timeout_minutes * 60
         ):
 
             _LOGGER.info(
-                "Proceeding %s '%s' '%s'", deviceType, self.entity_id, self._hostname
+                "Proceeding %s '%s' '%s'", device_type, self.entity_id, self._hostname
             )
 
-            recipient = self.build_recipient(deviceType)
+            recipient = self.build_recipient(device_type)
 
-            if recipient == None:
+            if recipient is None:
                 return
 
             # advise the sensor we're listening
-            async_doPost(
-                self._finder.getIPaddress(), "/json/listen", json.dumps(recipient)
+            async_do_post(
+                self._finder.get_ip_address(), "/json/listen", json.dumps(recipient)
             )
 
-            self._lastSubscribed = time.time()
+            self._last_subscribed = time.time()
 
         else:
             _LOGGER.info("subscribe ignored")
 
-    def build_recipient(self, deviceType):
+    def build_recipient(self, device_type):
 
-        if self.entity_id == None:
+        if self.entity_id is None:
             return None
 
         recipient = {}
-        if self.getPort() is not None:
-            recipient["port"] = self.getPort()
-        recipient[deviceType] = self._ordinal
+        if self.get_port() is not None:
+            recipient["port"] = self.get_port()
+        recipient[device_type] = self._ordinal
         recipient["endpoint"] = "/api/states/" + self.entity_id  #  light.study_light
         recipient["auth"] = self._hass.data[DOMAIN][AUTH_TOKEN]
 
