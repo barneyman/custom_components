@@ -7,22 +7,21 @@ from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers.event import async_track_time_interval
 from datetime import datetime, timedelta
 from .barneymanconst import (
-    BARNEYMAN_HOST,
     DEVICES_LIGHT,
     DEVICES_SENSOR,
     DEVICES_CAMERA,
     LISTENING_PORT,
     AUTH_TOKEN,
     BARNEYMAN_DEVICES_SEEN,
-    BARNEYMAN_CONFIG_ENTRY
+    BARNEYMAN_CONFIG_ENTRY,
+    BARNEYMAN_DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "barneyman"
+DOMAIN = BARNEYMAN_DOMAIN
 
 import homeassistant.helpers.config_validation as cv
-
 
 
 # async handlers

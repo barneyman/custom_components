@@ -12,6 +12,7 @@ from .barneymanconst import (
     BARNEYMAN_DEVICES,
     BARNEYMAN_DEVICES_SEEN,
     DEVICES_LIGHT,
+    BARNEYMAN_DOMAIN,
 )
 from .helpers import (
     BJFDeviceInfo,
@@ -37,7 +38,7 @@ from homeassistant.components.light import (
 # custom_components.light.barneyman to enable in config.yaml
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "barneyman"
+DOMAIN = BARNEYMAN_DOMAIN
 
 CONF_DEVICES = "devices"
 

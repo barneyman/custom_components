@@ -3,7 +3,12 @@ import json
 from datetime import timedelta
 from homeassistant.helpers.template import Template
 from homeassistant.components.rest.sensor import RestSensor
-from .barneymanconst import BARNEYMAN_DEVICES, BARNEYMAN_DEVICES_SEEN, DEVICES_SENSOR
+from .barneymanconst import (
+    BARNEYMAN_DEVICES,
+    BARNEYMAN_DEVICES_SEEN,
+    DEVICES_SENSOR,
+    BARNEYMAN_DOMAIN,
+)
 
 from homeassistant.core import callback
 
@@ -19,7 +24,7 @@ from homeassistant.components.binary_sensor import BinarySensorEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "barneyman"
+DOMAIN = BARNEYMAN_DOMAIN
 
 # called from entity_platform.py line 129
 # this gets forwarded from the component async_setup_entry

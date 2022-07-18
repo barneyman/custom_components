@@ -7,17 +7,22 @@ import voluptuous as vol
 # from homeassistant.helpers.discovery import load_platform
 # from homeassistant.helpers import config_entry_flow
 from homeassistant.config_entries import data_entry_flow
-from .barneymanconst import BARNEYMAN_HOST, BARNEYMAN_CONFIG_ENTRY, BARNEYMAN_DEVICES
+from .barneymanconst import (
+    BARNEYMAN_HOST,
+    BARNEYMAN_CONFIG_ENTRY,
+    BARNEYMAN_DEVICES,
+    BARNEYMAN_DOMAIN
+)
 
 
 # from .helpers import async_do_exists
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "barneyman"
+DOMAIN = BARNEYMAN_DOMAIN
 
 
-@config_entries.HANDLERS.register("barneyman")
+@config_entries.HANDLERS.register(BARNEYMAN_CONFIG_ENTRY)
 class FlowHandler(config_entries.ConfigFlow):
     """Handle a config flow."""
 

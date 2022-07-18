@@ -12,12 +12,17 @@ import async_timeout
 # from homeassistant.helpers.entity import Entity
 # from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.components.camera import Camera
-from .barneymanconst import BARNEYMAN_DEVICES, BARNEYMAN_DEVICES_SEEN, DEVICES_CAMERA
+from .barneymanconst import (
+    BARNEYMAN_DEVICES,
+    BARNEYMAN_DEVICES_SEEN,
+    DEVICES_CAMERA,
+    BARNEYMAN_DOMAIN,
+)
 from .helpers import async_do_query, BJFDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "barneyman"
+DOMAIN = BARNEYMAN_DOMAIN
 
 # called from entity_platform.py line 129
 # this gets forwarded from the component async_setup_entry
@@ -208,7 +213,6 @@ class BJFEspCamera(BJFDeviceInfo, Camera):
 
     async def async_camera_image(self, width=None, height=None):
         """Return a still image response from the camera."""
-
 
         try:
             websession = async_get_clientsession(self.hass, verify_ssl=False)

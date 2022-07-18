@@ -10,13 +10,13 @@ from homeassistant.components.rest.data import RestData
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import httpx
 from sqlalchemy import false
-from .barneymanconst import LISTENING_PORT, AUTH_TOKEN
+from .barneymanconst import LISTENING_PORT, AUTH_TOKEN, BARNEYMAN_DOMAIN
 
 # import asyncio
 
 
 _LOGGER = logging.getLogger(__name__)
-DOMAIN = "barneyman"
+DOMAIN = BARNEYMAN_DOMAIN
 
 
 def do_exists(hostname):
@@ -147,7 +147,7 @@ class BJFDeviceInfo:
             },
             "name": self._config["name"],
             "model": self._config["version"].split("|")[0],
-            "manufacturer": "barneyman",
+            "manufacturer": BARNEYMAN_DOMAIN,
             "sw_version": self._config["version"].split("|")[1],
             "configuration_url": "http://" + self._config["ip"],
         }
@@ -168,7 +168,7 @@ class BJFChildDeviceInfo:
                 (CONNECTION_NETWORK_MAC, self._mac)
             },
             "name": self._config["name"],
-            "manufacturer": "barneyman",
+            "manufacturer": BARNEYMAN_DOMAIN,
             "model": self._config["version"].split("|")[0],
             "sw_version": self._config["version"].split("|")[1],
             "via_device": self._parent,
