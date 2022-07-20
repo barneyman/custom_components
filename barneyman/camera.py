@@ -131,6 +131,8 @@ async def add_bjf_camera(data, add_devices, hass):
                     if potential is not None:
                         _LOGGER.info("Adding camera %s", potential.unique_id)
                         cameras_to_add.append(potential)
+                        hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN].append(hostname)
+
         else:
             _LOGGER.error(
                 "Failed to query %s at onboarding - device not added", hostname
