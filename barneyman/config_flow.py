@@ -3,6 +3,8 @@ import logging
 from typing import Any  ##, Optional, TypeVar, cast
 from homeassistant import config_entries
 import voluptuous as vol
+from homeassistant.data_entry_flow import FlowResult
+from homeassistant.components import onboarding, zeroconf
 
 # from homeassistant.helpers.discovery import load_platform
 # from homeassistant.helpers import config_entry_flow
@@ -43,7 +45,7 @@ class FlowHandler(config_entries.ConfigFlow):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> data_entry_flow.FlowResult:
-        _LOGGER.info("barneyman async_step_user ")
+        _LOGGER.info("barneyman async_step_user")
 
         if user_input is None:
             # "integration - Add (big yellow '+' bottom right!)"
@@ -70,7 +72,9 @@ class FlowHandler(config_entries.ConfigFlow):
 
     # when i'm mdns discovered
     # components.zeroconf.ZeroconfServiceInfo
-    async def async_step_zeroconf(self, discovery_info):
+    async def async_step_zeroconf(
+        self, discovery_info: zeroconf.ZeroconfServiceInfo
+    ) -> FlowResult:
         """Handle zeroconf discovery."""
 
         # ZeroconfServiceInfo(host='192.168.51.144', port=80, hostname='esp_b75c4f.local.',
@@ -182,7 +186,21 @@ class FlowHandler(config_entries.ConfigFlow):
             ],
         }
 
-        return await self.async_step_parseuser(self.zeroconf_info)
+        await self.async_set_unique_id(DOMAIN)
+
+        return await self.async_step_confirm()
+
+    async def async_step_confirm(self, user_input=None):
+        """Confirm the setup."""
+
+        # data = self._get_data()
+
+        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+            return self.async_create_entry(
+                title=BARNEYMAN_CONFIG_ENTRY, data=self.zeroconf_info
+            )
+
+        return self.async_show_form(step_id="confirm")
 
 
 # can't get this called!!

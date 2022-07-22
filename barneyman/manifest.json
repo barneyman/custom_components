@@ -1,18 +1,18 @@
 {
   "domain": "barneyman",
   "name": "barneyman's Devices",
-
-  "logo": "https://home-assistant.io/images/cast/splash.png",
-  "icon": "https://home-assistant.io/images/cast/splash.png",
-
   "config_flow": true,
-  "zeroconf": ["_barneyman._tcp.local."],
-
+  "zeroconf": [
+    "_barneyman._tcp.local."
+  ],
   "documentation": "https://github.com/barneyman/custom_components",
-  "dependencies": ["http", "zeroconf", "network"],
+  "dependencies": [
+    "http",
+    "zeroconf",
+    "network"
+  ],
   "codeowners": [],
   "requirements": [],
-  "version":"0.0.1",
-
-  "iot_class": "local_polling"  
+  "version": "0.0.1",
+  "iot_class": "local_polling"
 }

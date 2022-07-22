@@ -8,6 +8,9 @@
         "data": {
           "host": "Host IP Address"
         }
+      },
+      "confirm": {
+        "description": "Do you want to continue set up?"
       }
     },
     "abort": {
