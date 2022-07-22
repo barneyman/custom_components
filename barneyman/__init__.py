@@ -15,6 +15,8 @@ from .barneymanconst import (
     BARNEYMAN_DEVICES_SEEN,
     BARNEYMAN_CONFIG_ENTRY,
     BARNEYMAN_DOMAIN,
+    BARNEYMAN_FUNCTIONS,
+    BARNEYMAN_FN_AAD,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,6 +50,11 @@ async def async_setup(hass, baseConfig):
         AUTH_TOKEN: myAuthToken,
         LISTENING_PORT: listeningPort,
         BARNEYMAN_DEVICES_SEEN: [],
+        BARNEYMAN_FUNCTIONS: {
+            DEVICES_LIGHT: {BARNEYMAN_FN_AAD: None},
+            DEVICES_SENSOR: {BARNEYMAN_FN_AAD: None},
+            DEVICES_CAMERA: {BARNEYMAN_FN_AAD: None},
+        },
     }
 
     return True
@@ -77,6 +84,15 @@ async def async_setup_entry(hass, entry):
     hass.config_entries.async_setup_platforms(
         entry, [DEVICES_LIGHT, DEVICES_SENSOR, DEVICES_CAMERA]
     )
+
+    # # now remove any devices that were not seen
+    # cleanDevices = [
+    #     x
+    #     for x in entry.data.devices
+    #     if x["hostname"] in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]
+    # ]
+
+    # # hass.config_entries.async_update_entry(entry, data={"data": cleanDevices})
 
     return True
 

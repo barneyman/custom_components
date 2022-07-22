@@ -8,6 +8,8 @@ from .barneymanconst import (
     BARNEYMAN_DEVICES_SEEN,
     DEVICES_SENSOR,
     BARNEYMAN_DOMAIN,
+    BARNEYMAN_FUNCTIONS,
+    BARNEYMAN_FN_AAD,
 )
 
 from homeassistant.core import callback
@@ -26,37 +28,44 @@ _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = BARNEYMAN_DOMAIN
 
+
+async def async_scan_for(hass, config_entry):
+
+    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_SENSOR][BARNEYMAN_FN_AAD] is None:
+        _LOGGER.error("aad is None")
+        return False
+
+    _LOGGER.debug("async_scan_for addBJFsensor %s", (config_entry.data))
+    add_result = await addBJFsensor(
+        config_entry.data,
+        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_SENSOR][BARNEYMAN_FN_AAD],
+        hass,
+    )
+
+    if add_result is not True:
+        _LOGGER.error("SENSOR async_setup_entry: %s FAILED", config_entry.entry_id)
+
+    return add_result
+
+
 # called from entity_platform.py line 129
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
     _LOGGER.debug("SENSOR async_setup_entry: %s", config_entry.data)
 
-    async def async_update_options(hass, entry) -> None:
-        # pylint: disable=unused-argument
-
-        _LOGGER.info("async_update_options %s", (entry.title))
-        # reload me
-        await async_scan_for(config_entry)
-
-    async def async_scan_for(config_entry):
-
-        _LOGGER.debug("async_scan_for addBJFsensor %s", (config_entry.data))
-        add_result = await addBJFsensor(config_entry.data, async_add_devices, hass)
-
-        if add_result is not True:
-            _LOGGER.error("SENSOR async_setup_entry: %s FAILED", config_entry.entry_id)
-
-        return add_result
+    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_SENSOR][BARNEYMAN_FN_AAD] is None:
+        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_SENSOR][
+            BARNEYMAN_FN_AAD
+        ] = async_add_devices
 
     # add a listener to the config entry
     _LOGGER.debug("adding listener for %s", (config_entry.title))
-    config_entry.add_update_listener(async_update_options)
 
     # scan for lights
     _LOGGER.debug("first scan %s", (config_entry.title))
-    add_result = await async_scan_for(config_entry)
+    add_result = await async_scan_for(hass, config_entry)
 
-    # await hass.async_add_executor_job(addBJFsensor,config_entry.data[BARNEYMAN_HOST], async_add_devices, hass)
+    config_entry.async_on_unload(config_entry.add_update_listener(async_scan_for))
 
     return add_result
 

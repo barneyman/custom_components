@@ -13,6 +13,8 @@ from .barneymanconst import (
     BARNEYMAN_DEVICES_SEEN,
     DEVICES_LIGHT,
     BARNEYMAN_DOMAIN,
+    BARNEYMAN_FUNCTIONS,
+    BARNEYMAN_FN_AAD,
 )
 from .helpers import (
     BJFDeviceInfo,
@@ -89,34 +91,41 @@ async def async_remove_entry(hass, entry):
     _LOGGER.info("LIGHT async_remove_entry")
 
 
+@callback
+async def async_scan_for(hass, config_entry):
+
+    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_LIGHT][BARNEYMAN_FN_AAD] is None:
+        _LOGGER.error("aad is None")
+        return False
+
+    _LOGGER.info("async_scan_for %s", (config_entry.title))
+    add_result = await addBJFlight(
+        config_entry.data,
+        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_LIGHT][BARNEYMAN_FN_AAD],
+        hass,
+    )
+
+    if add_result is not True:
+        _LOGGER.error("LIGHT async_setup_entry: %s FAILED", config_entry.entry_id)
+
+    return add_result
+
+
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
     # pylint: disable=unused-argument
     _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry.data)
 
-    async def async_update_options(hass, entry) -> None:
-        # pylint: disable=unused-argument
-
-        # reload me
-        _LOGGER.info("async_update_options %s", (entry.title))
-        await async_scan_for(entry)
-
-        # """Update options."""
-
-    async def async_scan_for(config_entry):
-
-        add_result = await addBJFlight(config_entry.data, async_add_devices, hass)
-
-        if add_result != True:
-            _LOGGER.error("LIGHT async_setup_entry: %s FAILED", config_entry.entry_id)
-
-        return add_result
-
-    # add a listener to the config entry
-    config_entry.add_update_listener(async_update_options)
+    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_LIGHT][BARNEYMAN_FN_AAD] is None:
+        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_LIGHT][
+            BARNEYMAN_FN_AAD
+        ] = async_add_devices
 
     # scan for lights
-    add_result = await async_scan_for(config_entry)
+    add_result = await async_scan_for(hass, config_entry)
+
+    # add a listener to the config entry
+    config_entry.async_on_unload(config_entry.add_update_listener(async_scan_for))
 
     return add_result
 
@@ -145,7 +154,9 @@ async def addBJFlight(data, add_devices, hass):
     if BARNEYMAN_DEVICES not in data:
         return False
 
-    for device in data[BARNEYMAN_DEVICES]:
+    devices = data[BARNEYMAN_DEVICES]
+
+    for device in devices:
 
         hostname = device["hostname"]
         host = device["ip"]
@@ -171,7 +182,7 @@ async def addBJFlight(data, add_devices, hass):
 
         config = await async_do_query(host, "/json/config", True)
 
-        if config != None:
+        if config is not None:
 
             mac = config["mac"]
 
@@ -218,8 +229,15 @@ async def addBJFlight(data, add_devices, hass):
             _LOGGER.error(
                 "Failed to query %s at onboarding - device not added", hostname
             )
-            if hostname in data[BARNEYMAN_DEVICES]:
-                data[BARNEYMAN_DEVICES].remove(hostname)
+
+            # breakpoint()
+
+            # if hostname in devices:
+            #     cleanDevices = [
+            #         x for x in devices if not x["hostname"] == hostname
+            #     ]
+            #     # then update the config entry - this will not invoke listeners
+            #     # hass.config_entries._async_schedule_save()
 
         wip.remove(hostname)
 
@@ -313,7 +331,7 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
     @callback
     def parseData(self):
 
-        _LOGGER.info("light %s parseData ha been called!", (self._hostname))
+        _LOGGER.info("light %s parseData has been called", (self._hostname))
 
         if self._hass is not None:
             self._hass.add_job(self.subscribe, "light")
@@ -325,7 +343,7 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
 
         jsonData = json.loads(self._rest.data)
 
-        _LOGGER.info(jsonData)
+        _LOGGER.debug(jsonData)
 
         if jsonData is not None:
 
