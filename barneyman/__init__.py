@@ -69,14 +69,6 @@ async def async_setup_entry(hass, entry):
         hass.data[DOMAIN][AUTH_TOKEN] = entry.data[AUTH_TOKEN]
         _LOGGER.info("barneyman authtoken found")
 
-    # check for legacy ...
-    if entry.title != BARNEYMAN_CONFIG_ENTRY:
-
-        if hass.config_entries.async_get_entry(entry.entry_id) is not None:
-            _LOGGER.error("Old config entry - removing %s", (entry.title))
-            await hass.config_entries.async_remove(entry.entry_id)
-            return False
-
     # then forward this to all the platforms
     _LOGGER.info("forwarding to platforms %s %s", entry.title, entry.data)
 
