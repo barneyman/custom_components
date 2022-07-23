@@ -41,6 +41,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
             async_add_devices,
             hass,
         )
+
     # listen for 'device found'
     async_dispatcher_connect(hass, SIGNAL_BARNEYMAN_DISCOVERED, async_setupDevice)
 
@@ -48,7 +49,6 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     if hass.data[DOMAIN][BARNEYMAN_BROWSER] is not None:
         for each in hass.data[DOMAIN][BARNEYMAN_BROWSER].getHosts():
             await async_setupDevice(each)
-
 
     # TODO
     return True
@@ -105,7 +105,7 @@ async def add_bjf_camera(data, add_devices, hass):
 
                 potential = None
 
-                _LOGGER.info("Potential BJFRestSensor")
+                _LOGGER.info("Potential Camera")
 
                 cam_number = each_camera["camera"]
 
