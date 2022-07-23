@@ -8,6 +8,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.components import zeroconf
 from datetime import datetime, timedelta
 from .barneymanconst import (
+    BARNEYMAN_DEVICES,
     DEVICES_LIGHT,
     DEVICES_SENSOR,
     DEVICES_CAMERA,
@@ -66,6 +67,12 @@ async def async_setup_entry(hass, entry):
     if AUTH_TOKEN in entry.data:
         hass.data[DOMAIN][AUTH_TOKEN] = entry.data[AUTH_TOKEN]
         _LOGGER.info("barneyman authtoken found")
+
+    # clean up my legacy config data
+    if BARNEYMAN_DEVICES in entry.data:
+        _LOGGER.warning(
+            "Please remove the Devices array from the barneyman config_entry.data"
+        )
 
     # now set up my discovery class
     # barneymanDiscovery.set_zeroconf(await zeroconf.async_get_instance(hass))

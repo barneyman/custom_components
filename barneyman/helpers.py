@@ -9,6 +9,7 @@ from homeassistant.components.rest.data import RestData
 # from datetime import datetime, timedelta
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import httpx
+from pydantic import NoneBytes
 from sqlalchemy import false
 from .barneymanconst import LISTENING_PORT, AUTH_TOKEN, BARNEYMAN_DOMAIN
 

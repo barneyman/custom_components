@@ -170,6 +170,10 @@ async def addBJFlight(data, add_devices, hass):
 
         mac = config["mac"]
 
+        friendly_name = (
+            config["friendlyName"] if "friendlyName" in config else config["name"]
+        )
+
         rest = BJFRestData(hass, hostname, "GET", None, None, None)
 
         # and add a datacoordinator
@@ -191,6 +195,7 @@ async def addBJFlight(data, add_devices, hass):
 
                 potential = bjfESPLight(
                     hostname,
+                    friendly_name,
                     coord,
                     mac,
                     config,
@@ -225,16 +230,16 @@ async def addBJFlight(data, add_devices, hass):
 
 
 class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
-    def __init__(self, hostname, coord, mac, config, ordinal, rest, transport, hass):
+    def __init__(
+        self, hostname, friendlyName, coord, mac, config, ordinal, rest, transport, hass
+    ):
         BJFDeviceInfo.__init__(self, config, mac)
         BJFListener.__init__(self, transport, hass, hostname)
         CoordinatorEntity.__init__(self, coord)
 
         self._config = config
 
-        self._name = (
-            config["friendlyName"] if "friendlyName" in config else config["name"]
-        )
+        self._name = friendlyName
         self._state = None
         self._unique_id = mac + "_switch_" + str(ordinal)
         self._hostname = hostname

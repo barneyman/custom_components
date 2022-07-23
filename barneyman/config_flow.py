@@ -1,4 +1,3 @@
-import copy
 import logging
 from typing import Any  ##, Optional, TypeVar, cast
 from homeassistant import config_entries
