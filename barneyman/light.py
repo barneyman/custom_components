@@ -1,20 +1,33 @@
 import logging
 import json
-import voluptuous as vol
 import asyncio
+from datetime import timedelta
+import voluptuous as vol
 
 # Import the device class from the component that you want to support
 
-from datetime import timedelta
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+    CoordinatorEntity,
+)
+
+from homeassistant.core import callback
+from homeassistant.components.light import (
+    PLATFORM_SCHEMA,
+    LightEntity,
+)
+
+
 from .barneymanconst import (
     BARNEYMAN_HOST,
-    BARNEYMAN_DEVICES,
     BARNEYMAN_DEVICES_SEEN,
     DEVICES_LIGHT,
     BARNEYMAN_DOMAIN,
-    BARNEYMAN_FUNCTIONS,
-    BARNEYMAN_FN_AAD,
+    SIGNAL_BARNEYMAN_DISCOVERED,
+    BARNEYMAN_BROWSER,
 )
 from .helpers import (
     BJFDeviceInfo,
@@ -23,16 +36,9 @@ from .helpers import (
     do_post,
     async_do_query,
     BJFFinder,
+    chopLocal,
 )
 
-
-from homeassistant.core import callback
-
-
-from homeassistant.components.light import (
-    PLATFORM_SCHEMA,
-    LightEntity,
-)
 
 # Home Assistant depends on 3rd party packages for API specific code.
 # REQUIREMENTS = ['awesome_lights==1.2.3']
@@ -91,43 +97,29 @@ async def async_remove_entry(hass, entry):
     _LOGGER.info("LIGHT async_remove_entry")
 
 
-@callback
-async def async_scan_for(hass, config_entry):
-
-    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_LIGHT][BARNEYMAN_FN_AAD] is None:
-        _LOGGER.error("aad is None")
-        return False
-
-    _LOGGER.info("async_scan_for %s", (config_entry.title))
-    add_result = await addBJFlight(
-        config_entry.data,
-        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_LIGHT][BARNEYMAN_FN_AAD],
-        hass,
-    )
-
-    if add_result is not True:
-        _LOGGER.error("LIGHT async_setup_entry: %s FAILED", config_entry.entry_id)
-
-    return add_result
-
-
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
     # pylint: disable=unused-argument
     _LOGGER.debug("LIGHT async_setup_entry: %s", config_entry.data)
 
-    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_LIGHT][BARNEYMAN_FN_AAD] is None:
-        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_LIGHT][
-            BARNEYMAN_FN_AAD
-        ] = async_add_devices
+    async def async_setupDevice(z):
+        _LOGGER.info("async_setupDevice for Light")
+        await addBJFlight(
+            z,
+            async_add_devices,
+            hass,
+        )
 
-    # scan for lights
-    add_result = await async_scan_for(hass, config_entry)
+    # go thru what's already bean found
+    if hass.data[DOMAIN][BARNEYMAN_BROWSER] is not None:
+        for each in hass.data[DOMAIN][BARNEYMAN_BROWSER].getHosts():
+            await async_setupDevice(each)
 
-    # add a listener to the config entry
-    config_entry.async_on_unload(config_entry.add_update_listener(async_scan_for))
+    # listen for 'device found'
+    async_dispatcher_connect(hass, SIGNAL_BARNEYMAN_DISCOVERED, async_setupDevice)
 
-    return add_result
+    # TODO
+    return True
 
 
 # doesn't appear to be called
@@ -138,12 +130,6 @@ async def async_setup(hass, config_entry):
     # lets hunt for our items
 
 
-from homeassistant.helpers.update_coordinator import (
-    DataUpdateCoordinator,
-    CoordinatorEntity,
-)
-
-
 wip = []
 
 # TODO - find all the lights, and inc the ordinal
@@ -151,95 +137,84 @@ async def addBJFlight(data, add_devices, hass):
 
     potentials = []
 
-    if BARNEYMAN_DEVICES not in data:
-        return False
+    hostname = chopLocal(data.server)
+    # TODO - i've got - and _ mismatches between host names and mdns names in my esp code
+    # so fix that, then remove this
+    hostname = ".".join(str(c) for c in data.addresses[0])
+    # remove .local.
+    host = hostname
 
-    devices = data[BARNEYMAN_DEVICES]
+    if hostname in wip:
+        _LOGGER.debug("already seen in WIP %s", hostname)
+        return
 
-    for device in devices:
+    if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_LIGHT]:
+        _LOGGER.debug("already seen %s", hostname)
+        return
 
-        hostname = device["hostname"]
-        host = device["ip"]
+    # optimisation, if they have a platforms property, bail early on that
+    if b"platforms" in data.properties:
+        platforms = data.properties[b"platforms"].decode("utf8")
+        _LOGGER.debug("device has platforms %s", platforms)
+        if DEVICES_LIGHT not in platforms.split(","):
+            _LOGGER.info("optimised config fetch out")
+            return
 
-        if hostname in wip:
-            _LOGGER.debug("already seen in WIP %s", hostname)
-            continue
+    # first - query the light
+    _LOGGER.info("querying %s @ %s", hostname, host)
+    wip.append(hostname)
 
-        if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
-            _LOGGER.debug("already seen %s", hostname)
-            continue
+    config = await async_do_query(host, "/json/config", True)
 
-        # optimisation, if they have a pltforms property, bail early on that
-        if "properties" in device and "platforms" in device["properties"]:
-            _LOGGER.info("device has platforms %s", device["properties"]["platforms"])
-            if DEVICES_LIGHT not in device["properties"]["platforms"].split(","):
-                _LOGGER.info("optimised config fetch out")
-                continue
+    if config is not None:
 
-        # first - query the light
-        _LOGGER.info("querying %s @ %s", hostname, host)
-        wip.append(hostname)
+        mac = config["mac"]
 
-        config = await async_do_query(host, "/json/config", True)
+        rest = BJFRestData(hass, hostname, "GET", None, None, None)
 
-        if config is not None:
+        # and add a datacoordinator
+        coord = DataUpdateCoordinator(
+            hass,
+            _LOGGER,
+            name=hostname + "_DUC",
+            update_method=rest.async_bjfupdate,
+            update_interval=timedelta(seconds=10),
+        )
 
-            mac = config["mac"]
+        if "switchConfig" in config:
+            for switchConfig in config["switchConfig"]:
 
-            rest = BJFRestData(hass, hostname, "GET", None, None, None)
+                # switch may have the ability to prod us
+                transport = None
+                if "impl" in switchConfig:
+                    transport = switchConfig["impl"]
 
-            # and add a datacoordinator
-            coord = DataUpdateCoordinator(
-                hass,
-                _LOGGER,
-                name=hostname + "_DUC",
-                update_method=rest.async_bjfupdate,
-                update_interval=timedelta(seconds=10),
-            )
+                potential = bjfESPLight(
+                    hostname,
+                    coord,
+                    mac,
+                    config,
+                    switchConfig["switch"],
+                    rest,
+                    transport,
+                    hass,
+                )
 
-            await coord.async_config_entry_first_refresh()
+                # does this already exist?
 
-            if "switchConfig" in config:
-                for switchConfig in config["switchConfig"]:
+                _LOGGER.info("adding light %s", potential.unique_id)
+                potentials.append(potential)
 
-                    # switch may have the ability to prod us
-                    transport = None
-                    if "impl" in switchConfig:
-                        transport = switchConfig["impl"]
+                hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_LIGHT].append(
+                    hostname
+                )
 
-                    potential = bjfESPLight(
-                        hostname,
-                        coord,
-                        mac,
-                        config,
-                        switchConfig["switch"],
-                        rest,
-                        transport,
-                        hass,
-                    )
+        await coord.async_config_entry_first_refresh()
 
-                    # does this already exist?
+    else:
+        _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
 
-                    _LOGGER.info("adding light %s", potential.unique_id)
-                    potentials.append(potential)
-
-                    hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN].append(hostname)
-
-        else:
-            _LOGGER.error(
-                "Failed to query %s at onboarding - device not added", hostname
-            )
-
-            # breakpoint()
-
-            # if hostname in devices:
-            #     cleanDevices = [
-            #         x for x in devices if not x["hostname"] == hostname
-            #     ]
-            #     # then update the config entry - this will not invoke listeners
-            #     # hass.config_entries._async_schedule_save()
-
-        wip.remove(hostname)
+    wip.remove(hostname)
 
     if add_devices is not None:
         add_devices(potentials)

@@ -19,7 +19,14 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = BARNEYMAN_DOMAIN
 
 
+def chopLocal(hostname):
+    if str(hostname).endswith(".local."):
+        hostname = hostname[: -len(".local.")]
+    return hostname
+
+
 def do_exists(hostname):
+
     json_ret = do_query(hostname, "/json/config", True, timeout=2)
 
     _LOGGER.info("do_exists %s ", hostname)
@@ -50,6 +57,7 @@ async def async_do_exists(hostname):
 def do_query(
     hostname, url, return_json=False, httpmethod="GET", timeout=10, json_body=None
 ):
+    hostname = chopLocal(hostname)
 
     try:
         _LOGGER.info("do_query %s%s %s", hostname, url, httpmethod)
@@ -87,6 +95,7 @@ async def async_do_query(
     hostname, url, return_json=False, httpmethod="GET", timeout=30, json_body=None
 ):
     #     """Get the latest data from REST service with provided method."""
+    hostname = chopLocal(hostname)
 
     built_url = "http://" + hostname + url
 
@@ -113,13 +122,15 @@ async def async_do_query(
 
     except httpx.HTTPStatusError as exc:
         _LOGGER.error(
-            "Error response %s while requesting %s.",
+            "Error response '%s' while requesting %s.",
             str(exc.response.status_code),
             exc.request.url,
         )
 
     except httpx.RequestError as exc:
-        _LOGGER.error("An error occurred while requesting %s.", exc.request.url)
+        _LOGGER.error(
+            "An error '%s' occurred while requesting %s.", exc, exc.request.url
+        )
 
     except Exception as exception:
         _LOGGER.error(
@@ -184,23 +195,7 @@ class BJFFinder:
 
         _LOGGER.debug("async_get_ip_address for %s", (self._hostname))
 
-        entries = self._hass.config_entries.async_entries(DOMAIN)
-
-        for each_entry in entries:
-
-            _LOGGER.debug("each_entry %s", (each_entry))
-
-            myentries = each_entry.data["Devices"]
-
-            _LOGGER.debug("myentries %s", (myentries))
-
-            for each in myentries:
-                if each["hostname"] == self._hostname:
-                    _LOGGER.info("found %s for %s", each["ip"], self._hostname)
-                    return each["ip"]
-
-        _LOGGER.info("found nothing for %s", (self._hostname))
-        return None
+        return self._hostname
 
 
 # this can be reused by a single sensor

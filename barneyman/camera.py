@@ -3,6 +3,7 @@ import logging
 # import json
 import asyncio
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 import aiohttp
 import async_timeout
 
@@ -17,54 +18,40 @@ from .barneymanconst import (
     BARNEYMAN_DEVICES_SEEN,
     DEVICES_CAMERA,
     BARNEYMAN_DOMAIN,
-    BARNEYMAN_FUNCTIONS,
-    BARNEYMAN_FN_AAD,
+    BARNEYMAN_BROWSER,
+    SIGNAL_BARNEYMAN_DISCOVERED,
 )
-from .helpers import async_do_query, BJFDeviceInfo
+from .helpers import async_do_query, BJFDeviceInfo, chopLocal
 
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = BARNEYMAN_DOMAIN
 
 
-async def async_scan_for(hass, config_entry):
-
-    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_CAMERA][BARNEYMAN_FN_AAD] is None:
-        _LOGGER.error("aad is None")
-        return False
-
-    add_result = await add_bjf_camera(
-        config_entry.data,
-        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_CAMERA][BARNEYMAN_FN_AAD],
-        hass,
-    )
-
-    if add_result is not True:
-        _LOGGER.error("CAMERA async_setup_entry: %s FAILED", config_entry.entry_id)
-
-    return add_result
-
-
 # called from entity_platform.py line 129
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
+
     _LOGGER.debug("CAMERA async_setup_entry: %s", config_entry.data)
 
-    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_CAMERA][BARNEYMAN_FN_AAD] is None:
-        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_CAMERA][
-            BARNEYMAN_FN_AAD
-        ] = async_add_devices
+    async def async_setupDevice(z):
+        _LOGGER.info("async_setupDevice for Camera")
+        await add_bjf_camera(
+            z,
+            async_add_devices,
+            hass,
+        )
 
-    # scan for lights
-    add_result = await async_scan_for(hass, config_entry)
+    # go thru what's already bean found
+    if hass.data[DOMAIN][BARNEYMAN_BROWSER] is not None:
+        for each in hass.data[DOMAIN][BARNEYMAN_BROWSER].getHosts():
+            await async_setupDevice(each)
 
-    # add a listener to the config entry
-    config_entry.async_on_unload(config_entry.add_update_listener(async_scan_for))
+    # listen for 'device found'
+    async_dispatcher_connect(hass, SIGNAL_BARNEYMAN_DISCOVERED, async_setupDevice)
 
-    if add_result is not True:
-        _LOGGER.error("CAMERA async_setup_entry: %s FAILED", config_entry.entry_id)
-
-    return add_result
+    # TODO
+    return True
 
 
 wip = []
@@ -75,82 +62,82 @@ async def add_bjf_camera(data, add_devices, hass):
 
     cameras_to_add = []
 
-    if BARNEYMAN_DEVICES not in data:
-        return False
+    hostname = chopLocal(data.server)
+    # TODO - i've got - and _ mismatches between host names and mdns names in my esp code
+    # so fix that, then remove this
+    hostname = ".".join(str(c) for c in data.addresses[0])
+    # remove .local.
+    host = hostname
 
-    for device in data[BARNEYMAN_DEVICES]:
+    if hostname in wip:
+        _LOGGER.debug("already seen in WIP %s", hostname)
+        return
 
-        hostname = device["hostname"]
-        host = device["ip"]
+    if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_CAMERA]:
+        return
 
-        if hostname in wip:
-            _LOGGER.debug("already seen in WIP %s", hostname)
-            continue
+    # optimisation, if they have a platforms property, bail early on that
+    if b"platforms" in data.properties:
+        platforms = data.properties[b"platforms"].decode("utf8")
+        _LOGGER.debug("device has platforms %s", platforms)
+        if DEVICES_CAMERA not in platforms.split(","):
+            _LOGGER.info("optimised config fetch out")
+            return
 
-        if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
-            continue
+    wip.append(hostname)
 
-        # optimisation, if they have a pltforms property, bail early on that
-        if "properties" in device and "platforms" in device["properties"]:
-            _LOGGER.info("device has platforms %s", device["properties"]["platforms"])
-            if DEVICES_CAMERA not in device["properties"]["platforms"].split(","):
-                _LOGGER.info("optimised config fetch out")
-                continue
+    config = await async_do_query(host, "/json/config", True)
 
-        wip.append(hostname)
+    if config is not None:
 
-        config = await async_do_query(host, "/json/config", True)
+        mac = config["mac"]
 
-        if config is not None:
+        # built early, in case it's shared
+        url = "http://" + config["ip"] + "/camera?cam="
 
-            mac = config["mac"]
+        friendly_name = (
+            config["friendlyName"] if "friendlyName" in config else config["name"]
+        )
 
-            # built early, in case it's shared
-            url = "http://" + config["ip"] + "/camera?cam="
+        # add a bunch of cameras
+        if "cameraConfig" in config:
+            for each_camera in config["cameraConfig"]:
 
-            friendly_name = (
-                config["friendlyName"] if "friendlyName" in config else config["name"]
-            )
+                potential = None
 
-            # add a bunch of cameras
-            if "cameraConfig" in config:
-                for each_camera in config["cameraConfig"]:
+                _LOGGER.info("Potential BJFRestSensor")
 
-                    potential = None
+                cam_number = each_camera["camera"]
 
-                    _LOGGER.info("Potential BJFRestSensor")
+                potential = BJFEspCamera(
+                    hass,
+                    mac,
+                    hostname,
+                    # entity name - +1 for the cosmetic name - that's confusing!
+                    friendly_name
+                    + " "
+                    + each_camera["name"]
+                    + " "
+                    + str(cam_number + 1),
+                    url + str(cam_number),
+                    cam_number,
+                    config,
+                )
 
-                    cam_number = each_camera["camera"]
+                if potential is not None:
+                    _LOGGER.info("Adding camera %s", potential.unique_id)
+                    cameras_to_add.append(potential)
 
-                    potential = BJFEspCamera(
-                        hass,
-                        mac,
-                        hostname,
-                        # entity name - +1 for the cosmetic name - that's confusing!
-                        friendly_name
-                        + " "
-                        + each_camera["name"]
-                        + " "
-                        + str(cam_number + 1),
-                        url + str(cam_number),
-                        cam_number,
-                        config,
+                    hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_CAMERA].append(
+                        hostname
                     )
 
-                    if potential is not None:
-                        _LOGGER.info("Adding camera %s", potential.unique_id)
-                        cameras_to_add.append(potential)
+    else:
+        _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
+        if hostname in data[BARNEYMAN_DEVICES]:
+            data[BARNEYMAN_DEVICES].remove(hostname)
 
-                        hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN].append(hostname)
-
-        else:
-            _LOGGER.error(
-                "Failed to query %s at onboarding - device not added", hostname
-            )
-            if hostname in data[BARNEYMAN_DEVICES]:
-                data[BARNEYMAN_DEVICES].remove(hostname)
-
-        wip.remove(hostname)
+    wip.remove(hostname)
 
     if add_devices is not None:
         add_devices(cameras_to_add)

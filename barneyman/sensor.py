@@ -3,13 +3,15 @@ import json
 from datetime import timedelta
 from homeassistant.helpers.template import Template
 from homeassistant.components.rest.sensor import RestSensor
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
 from .barneymanconst import (
     BARNEYMAN_DEVICES,
     BARNEYMAN_DEVICES_SEEN,
     DEVICES_SENSOR,
     BARNEYMAN_DOMAIN,
-    BARNEYMAN_FUNCTIONS,
-    BARNEYMAN_FN_AAD,
+    BARNEYMAN_BROWSER,
+    SIGNAL_BARNEYMAN_DISCOVERED,
 )
 
 from homeassistant.core import callback
@@ -20,6 +22,7 @@ from .helpers import (
     BJFListener,
     async_do_query,
     BJFFinder,
+    chopLocal,
 )
 from homeassistant.components.binary_sensor import BinarySensorEntity
 
@@ -29,45 +32,30 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = BARNEYMAN_DOMAIN
 
 
-async def async_scan_for(hass, config_entry):
-
-    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_SENSOR][BARNEYMAN_FN_AAD] is None:
-        _LOGGER.error("aad is None")
-        return False
-
-    _LOGGER.debug("async_scan_for addBJFsensor %s", (config_entry.data))
-    add_result = await addBJFsensor(
-        config_entry.data,
-        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_SENSOR][BARNEYMAN_FN_AAD],
-        hass,
-    )
-
-    if add_result is not True:
-        _LOGGER.error("SENSOR async_setup_entry: %s FAILED", config_entry.entry_id)
-
-    return add_result
-
-
 # called from entity_platform.py line 129
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
+
     _LOGGER.debug("SENSOR async_setup_entry: %s", config_entry.data)
 
-    if hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_SENSOR][BARNEYMAN_FN_AAD] is None:
-        hass.data[DOMAIN][BARNEYMAN_FUNCTIONS][DEVICES_SENSOR][
-            BARNEYMAN_FN_AAD
-        ] = async_add_devices
+    async def async_setupDevice(z):
+        _LOGGER.info("async_setupDevice for Sensor")
+        await addBJFsensor(
+            z,
+            async_add_devices,
+            hass,
+        )
 
-    # add a listener to the config entry
-    _LOGGER.debug("adding listener for %s", (config_entry.title))
+    # go thru what's already bean found
+    if hass.data[DOMAIN][BARNEYMAN_BROWSER] is not None:
+        for each in hass.data[DOMAIN][BARNEYMAN_BROWSER].getHosts():
+            await async_setupDevice(each)
 
-    # scan for lights
-    _LOGGER.debug("first scan %s", (config_entry.title))
-    add_result = await async_scan_for(hass, config_entry)
+    # listen for 'device found'
+    async_dispatcher_connect(hass, SIGNAL_BARNEYMAN_DISCOVERED, async_setupDevice)
 
-    config_entry.async_on_unload(config_entry.add_update_listener(async_scan_for))
-
-    return add_result
+    # TODO
+    return True
 
 
 from homeassistant.helpers.update_coordinator import (
@@ -82,161 +70,155 @@ async def addBJFsensor(data, add_devices, hass):
 
     sensorsToAdd = []
 
-    if BARNEYMAN_DEVICES not in data:
-        return False
+    hostname = chopLocal(data.server)
+    # TODO - i've got - and _ mismatches between host names and mdns names in my esp code
+    # so fix that, then remove this
+    hostname = ".".join(str(c) for c in data.addresses[0])
+    # remove .local.
+    host = hostname
 
-    for device in data[BARNEYMAN_DEVICES]:
+    if hostname in wip:
+        _LOGGER.debug("already seen in WIP %s", hostname)
+        return
 
-        hostname = device["hostname"]
-        host = device["ip"]
+    if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_SENSOR]:
+        _LOGGER.info("device %s has already been added", (hostname))
+        return
 
-        if hostname in wip:
-            _LOGGER.debug("already seen in WIP %s", hostname)
-            continue
+    # optimisation, if they have a platforms property, bail early on that
+    if b"platforms" in data.properties:
+        platforms = data.properties[b"platforms"].decode("utf8")
+        _LOGGER.debug("device has platforms %s", platforms)
+        if DEVICES_SENSOR not in platforms.split(","):
+            _LOGGER.info("optimised config fetch out")
+            return
 
-        if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]:
-            _LOGGER.info("device %s has already been added", (hostname))
-            continue
+    _LOGGER.info("addBJFsensor querying %s @ %s", hostname, host)
+    wip.append(hostname)
 
-        # optimisation, if they have a pltforms property, bail early on that
-        if "properties" in device and "platforms" in device["properties"]:
-            _LOGGER.info("device has platforms %s", device["properties"]["platforms"])
-            if DEVICES_SENSOR not in device["properties"]["platforms"].split(","):
-                _LOGGER.info("optimised config fetch out")
-                continue
+    config = await async_do_query(host, "/json/config", True)
 
-        _LOGGER.info("addBJFsensor querying %s @ %s", hostname, host)
-        wip.append(hostname)
+    if config != None:
 
-        config = await async_do_query(host, "/json/config", True)
+        mac = config["mac"]
 
-        if config != None:
+        # built early, in case it's shared
+        rest = BJFRestData(hass, hostname, "GET", None, None, None)
 
-            mac = config["mac"]
+        friendly_name = (
+            config["friendlyName"] if "friendlyName" in config else config["name"]
+        )
 
-            # built early, in case it's shared
-            rest = BJFRestData(hass, hostname, "GET", None, None, None)
+        # and add a datacoordinator
+        coord = DataUpdateCoordinator(
+            hass,
+            _LOGGER,
+            name=friendly_name + "_DUC",
+            update_method=rest.async_bjfupdate,
+            update_interval=timedelta(seconds=10),
+        )
 
-            friendly_name = (
-                config["friendlyName"] if "friendlyName" in config else config["name"]
-            )
+        # add a bunch of rest sensors
+        if "sensorConfig" in config:
+            for eachSensor in config["sensorConfig"]:
+                for element in eachSensor["elements"]:
+                    deviceClass = element["type"]
+                    potential = None
 
-            # and add a datacoordinator
-            coord = DataUpdateCoordinator(
-                hass,
-                _LOGGER,
-                name=friendly_name + "_DUC",
-                update_method=rest.async_bjfupdate,
-                update_interval=timedelta(seconds=10),
-            )
+                    # special case - if there's an instant sensor - PIR generally
+                    if "impl" in element:
 
-            # await hass.async_add_executor_job(coord.async_config_entry_first_refresh)
+                        sensorValue = Template(
+                            '{{ value_json["sensorState"]['
+                            + str(eachSensor["sensor"])
+                            + "].state"
+                            + " }}",
+                            hass,
+                        )
 
-            # asyncio.run_coroutine_threadsafe(
-            #     coordinator.async_config_entry_first_refresh(), hass.loop
-            #     ).result()
+                        _LOGGER.debug(sensorValue)
 
-            # add a bunch of rest sensors
-            if "sensorConfig" in config:
-                for eachSensor in config["sensorConfig"]:
-                    for element in eachSensor["elements"]:
-                        deviceClass = element["type"]
-                        potential = None
+                        _LOGGER.info("Potential BJFBinarySensor")
 
-                        # special case - if there's an instant sensor - PIR generally
-                        if "impl" in element:
+                        potential = BJFBinarySensor(
+                            hass,
+                            coord,
+                            element["impl"],
+                            mac,
+                            hostname,
+                            rest,
+                            # entity name
+                            friendly_name
+                            + " "
+                            + eachSensor["name"]
+                            + " "
+                            + deviceClass,
+                            deviceClass,
+                            None,
+                            sensorValue,
+                            eachSensor["sensor"],
+                            deviceClass,
+                            config,
+                        )
 
-                            sensorValue = Template(
-                                '{{ value_json["sensorState"]['
-                                + str(eachSensor["sensor"])
-                                + "].state"
-                                + " }}",
-                                hass,
-                            )
+                    else:
+                        _LOGGER.info("Potential BJFRestSensor")
 
-                            _LOGGER.debug(sensorValue)
+                        # uom, round
 
-                            _LOGGER.info("Potential BJFBinarySensor")
+                        uom = element["uom"] if "uom" in element else None
+                        numDP = element["round"] if "round" in element else "0"
 
-                            potential = BJFBinarySensor(
-                                hass,
-                                coord,
-                                element["impl"],
-                                mac,
-                                hostname,
-                                rest,
-                                # entity name
-                                friendly_name
-                                + " "
-                                + eachSensor["name"]
-                                + " "
-                                + deviceClass,
-                                deviceClass,
-                                None,
-                                sensorValue,
-                                eachSensor["sensor"],
-                                deviceClass,
-                                config,
-                            )
+                        # build the template string
+                        sensorValue = Template(
+                            '{{ value_json["sensorState"]['
+                            + str(eachSensor["sensor"])
+                            + "]."
+                            + deviceClass
+                            + " | round("
+                            + numDP
+                            + ") }}",
+                            hass,
+                        )
 
-                        else:
-                            _LOGGER.info("Potential BJFRestSensor")
+                        _LOGGER.debug(sensorValue)
 
-                            # uom, round
+                        potential = BJFRestSensor(
+                            hass,
+                            coord,
+                            mac,
+                            hostname,
+                            rest,
+                            # entity name
+                            friendly_name
+                            + " "
+                            + eachSensor["name"]
+                            + " "
+                            + deviceClass,
+                            deviceClass,
+                            uom,
+                            sensorValue,
+                            eachSensor["sensor"],
+                            deviceClass,
+                            config,
+                        )
 
-                            uom = element["uom"] if "uom" in element else None
-                            numDP = element["round"] if "round" in element else "0"
+                    if potential is not None:
+                        _LOGGER.info("Adding sensor %s", potential.unique_id)
+                        sensorsToAdd.append(potential)
 
-                            # build the template string
-                            sensorValue = Template(
-                                '{{ value_json["sensorState"]['
-                                + str(eachSensor["sensor"])
-                                + "]."
-                                + deviceClass
-                                + " | round("
-                                + numDP
-                                + ") }}",
-                                hass,
-                            )
+                        hass.data[DOMAIN][
+                            BARNEYMAN_DEVICES_SEEN + DEVICES_SENSOR
+                        ].append(hostname)
 
-                            _LOGGER.debug(sensorValue)
+        await coord.async_config_entry_first_refresh()
 
-                            potential = BJFRestSensor(
-                                hass,
-                                coord,
-                                mac,
-                                hostname,
-                                rest,
-                                # entity name
-                                friendly_name
-                                + " "
-                                + eachSensor["name"]
-                                + " "
-                                + deviceClass,
-                                deviceClass,
-                                uom,
-                                sensorValue,
-                                eachSensor["sensor"],
-                                deviceClass,
-                                config,
-                            )
+    else:
+        _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
+        if hostname in data[BARNEYMAN_DEVICES]:
+            data[BARNEYMAN_DEVICES].remove(hostname)
 
-                        if potential is not None:
-                            _LOGGER.info("Adding sensor %s", potential.unique_id)
-                            sensorsToAdd.append(potential)
-
-                            hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN].append(hostname)
-
-            await coord.async_config_entry_first_refresh()
-
-        else:
-            _LOGGER.error(
-                "Failed to query %s at onboarding - device not added", hostname
-            )
-            if hostname in data[BARNEYMAN_DEVICES]:
-                data[BARNEYMAN_DEVICES].remove(hostname)
-
-        wip.remove(hostname)
+    wip.remove(hostname)
 
     if add_devices is not None:
         add_devices(sensorsToAdd)

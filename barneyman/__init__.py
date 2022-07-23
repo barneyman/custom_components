@@ -5,6 +5,7 @@ import voluptuous as vol
 import json
 from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.components import zeroconf
 from datetime import datetime, timedelta
 from .barneymanconst import (
     DEVICES_LIGHT,
@@ -13,11 +14,11 @@ from .barneymanconst import (
     LISTENING_PORT,
     AUTH_TOKEN,
     BARNEYMAN_DEVICES_SEEN,
-    BARNEYMAN_CONFIG_ENTRY,
     BARNEYMAN_DOMAIN,
-    BARNEYMAN_FUNCTIONS,
-    BARNEYMAN_FN_AAD,
+    BARNEYMAN_BROWSER,
 )
+
+from .discovery import barneymanBrowser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,12 +50,9 @@ async def async_setup(hass, baseConfig):
     hass.data[DOMAIN] = {
         AUTH_TOKEN: myAuthToken,
         LISTENING_PORT: listeningPort,
-        BARNEYMAN_DEVICES_SEEN: [],
-        BARNEYMAN_FUNCTIONS: {
-            DEVICES_LIGHT: {BARNEYMAN_FN_AAD: None},
-            DEVICES_SENSOR: {BARNEYMAN_FN_AAD: None},
-            DEVICES_CAMERA: {BARNEYMAN_FN_AAD: None},
-        },
+        BARNEYMAN_DEVICES_SEEN + DEVICES_LIGHT: [],
+        BARNEYMAN_DEVICES_SEEN + DEVICES_SENSOR: [],
+        BARNEYMAN_DEVICES_SEEN + DEVICES_CAMERA: [],
     }
 
     return True
@@ -69,6 +67,12 @@ async def async_setup_entry(hass, entry):
         hass.data[DOMAIN][AUTH_TOKEN] = entry.data[AUTH_TOKEN]
         _LOGGER.info("barneyman authtoken found")
 
+    # now set up my discovery class
+    # barneymanDiscovery.set_zeroconf(await zeroconf.async_get_instance(hass))
+    hass.data[BARNEYMAN_DOMAIN][BARNEYMAN_BROWSER] = barneymanBrowser(
+        hass, await zeroconf.async_get_instance(hass)
+    )
+
     # then forward this to all the platforms
     _LOGGER.info("forwarding to platforms %s %s", entry.title, entry.data)
 
@@ -76,15 +80,6 @@ async def async_setup_entry(hass, entry):
     hass.config_entries.async_setup_platforms(
         entry, [DEVICES_LIGHT, DEVICES_SENSOR, DEVICES_CAMERA]
     )
-
-    # # now remove any devices that were not seen
-    # cleanDevices = [
-    #     x
-    #     for x in entry.data.devices
-    #     if x["hostname"] in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]
-    # ]
-
-    # # hass.config_entries.async_update_entry(entry, data={"data": cleanDevices})
 
     return True
 

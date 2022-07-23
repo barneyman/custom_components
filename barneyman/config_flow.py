@@ -14,7 +14,6 @@ from .barneymanconst import (
     BARNEYMAN_CONFIG_ENTRY,
     BARNEYMAN_DEVICES,
     BARNEYMAN_DOMAIN,
-    BARNEYMAN_DEVICES_SEEN,
 )
 
 
@@ -102,72 +101,8 @@ class FlowHandler(config_entries.ConfigFlow):
         )
         for entry in self._async_current_entries():
             if BARNEYMAN_CONFIG_ENTRY == entry.title:
-
-                # it's already there - have we seen this host before?
-                newdata = copy.deepcopy(entry.data[BARNEYMAN_DEVICES])
-                dnshost = discovery_info.hostname
-                ipaddr = discovery_info.host
-
-                if not any(
-                    (discovery_info.hostname) == hostentry["hostname"]
-                    for hostentry in entry.data[BARNEYMAN_DEVICES]
-                ):
-
-                    # add it to the list
-
-                    newentry = {
-                        "hostname": dnshost,
-                        "ip": ipaddr,
-                        "properties": discovery_info.properties,
-                    }
-                    newdata.append(newentry)
-
-                    _LOGGER.info("updating config entry %s", (entry.title))
-                    _LOGGER.debug("debug: %s", (entry))
-                    newentrydata = {BARNEYMAN_DEVICES: newdata}
-                    # force a change - we deep copied the data, so this should be seen as new
-                    heard = self.hass.config_entries.async_update_entry(
-                        entry, data=newentrydata
-                    )
-                    if not heard:
-                        _LOGGER.error("config change for %s unheard", (newentrydata))
-                else:
-
-                    # check we're up to date with its info
-                    for each in newdata:
-                        if each["hostname"] == dnshost:
-                            # see if it's changed
-                            if (
-                                # if its Ip address has changed
-                                each["ip"] != ipaddr
-                                # or its props
-                                or each["properties"] != discovery_info.properties
-                                # or we have not seen it (normally because it's in the devices array but we didn't succeed last time)
-                                or dnshost
-                                not in self.hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN]
-                            ):
-                                _LOGGER.warning("meta change for %s", (dnshost))
-                                each["ip"] = ipaddr
-                                each["properties"] = discovery_info.properties
-                                newentrydata = {BARNEYMAN_DEVICES: newdata}
-                                entry.data = None
-                                heard = self.hass.config_entries.async_update_entry(
-                                    entry, data=newentrydata
-                                )
-                                if not heard:
-                                    _LOGGER.error(
-                                        "config change for %s unheard", (entry)
-                                    )
-                                break
-                            # found it, unchanged, leave
-                            else:
-                                break
-
-                    _LOGGER.info(
-                        "host %s has already been added", (discovery_info.hostname)
-                    )
-
-                return self.async_abort(reason="already_configured")
+                # ignore setup from here
+                return self.async_abort(reason="single_instance_allowed")
 
         # we have seen a barneyman device, but my integration is not
         # installed - create a config flow step so we can ask for
