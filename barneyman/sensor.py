@@ -2,7 +2,21 @@ import logging
 import json
 from datetime import timedelta
 from homeassistant.helpers.template import Template
-from homeassistant.components.rest.sensor import RestSensor
+from homeassistant.components.rest.sensor import (
+    RestSensor,
+    CONF_JSON_ATTRS,
+    CONF_JSON_ATTRS_PATH,
+)
+from homeassistant.components.sensor import (
+    CONF_STATE_CLASS,
+)
+from homeassistant.const import (
+    CONF_RESOURCE_TEMPLATE,
+    CONF_FORCE_UPDATE,
+    CONF_VALUE_TEMPLATE,
+    CONF_UNIT_OF_MEASUREMENT,
+    CONF_DEVICE_CLASS,
+)
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .barneymanconst import (
@@ -250,34 +264,21 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
 
         CoordinatorEntity.__init__(self, coord)
 
-        # self,
-        # coordinator,
-        # rest,
-        # name,
-        # unit_of_measurement,
-        # device_class,
-        # state_class,
-        # value_template,
-        # json_attrs,
-        # force_update,
-        # resource_template,
-        # json_attrs_path,
+        self._name = name
 
-        RestSensor.__init__(
-            # sensorclass
-            self,
-            coord,
-            rest,
-            name,
-            unit,
-            device_type,
-            "measurement",
-            value_template=jsonSensorQuery,
-            json_attrs=None,
-            force_update=True,
-            resource_template=None,
-            json_attrs_path=None,
-        )
+        rsconfig = {
+            CONF_RESOURCE_TEMPLATE: None,
+            CONF_FORCE_UPDATE: True,
+            CONF_VALUE_TEMPLATE: jsonSensorQuery,
+            CONF_JSON_ATTRS: None,
+            CONF_JSON_ATTRS_PATH: None,
+            CONF_UNIT_OF_MEASUREMENT: unit,
+            CONF_DEVICE_CLASS: device_type,
+            CONF_STATE_CLASS: "measurement",
+        }
+
+        RestSensor.__init__(self, hass, coord, rest, rsconfig, name)
+
         BJFDeviceInfo.__init__(self, config, mac)
 
         # and subscribe for data updates
@@ -291,6 +292,10 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
     def unique_id(self):
         """Return unique ID for sensor."""
         return self._unique_id
+
+    @property
+    def name(self):
+        return self._name
 
     @callback
     def alertUpdate(self):
