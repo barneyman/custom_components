@@ -36,7 +36,6 @@ class FlowHandler(config_entries.ConfigFlow):
         # """Initialize flow."""
         self._host = None
         self._import_groups = False
-        self.zeroconf_info = None
 
     # this gets called thru "integration - Add (big yellow '+' bottom right!)"
     # or from zeroconf
@@ -109,17 +108,6 @@ class FlowHandler(config_entries.ConfigFlow):
         # from the configuration.yaml)
         # breakpoint()
 
-        # lets add our config entry, with our first item in the list
-        self.zeroconf_info = {
-            BARNEYMAN_DEVICES: [
-                {
-                    "hostname": discovery_info.hostname,
-                    "ip": discovery_info.host,
-                    "properties": discovery_info.properties,
-                }
-            ],
-        }
-
         await self.async_set_unique_id(DOMAIN)
 
         return await self.async_step_confirm()
@@ -130,9 +118,7 @@ class FlowHandler(config_entries.ConfigFlow):
         # data = self._get_data()
 
         if user_input is not None or not onboarding.async_is_onboarded(self.hass):
-            return self.async_create_entry(
-                title=BARNEYMAN_CONFIG_ENTRY, data=self.zeroconf_info
-            )
+            return self.async_create_entry(title=BARNEYMAN_CONFIG_ENTRY, data={})
 
         return self.async_show_form(step_id="confirm")
 
