@@ -84,5 +84,9 @@ async def async_prepareUserAuth(hass, entry):
     # TODO remove this log
     _LOGGER.warning("got token %s", llat)
 
+    # TODO
+    # revoke this refresh token on unload and/or restart so that the
+    # LLAT is also revoked
+
     # set my memory data up
     await async_prepareMemoryData(hass, llat, 49152)
