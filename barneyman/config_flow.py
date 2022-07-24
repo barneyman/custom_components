@@ -11,7 +11,6 @@ from homeassistant.config_entries import data_entry_flow
 from .barneymanconst import (
     BARNEYMAN_HOST,
     BARNEYMAN_CONFIG_ENTRY,
-    BARNEYMAN_DEVICES,
     BARNEYMAN_DOMAIN,
 )
 

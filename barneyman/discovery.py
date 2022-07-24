@@ -20,18 +20,19 @@ class barneymanListener(ServiceListener):
         self._hass = hass
 
     def add_service(self, zc: zeroconf.HaZeroconf, type_: str, name: str) -> None:
-        _LOGGER.info("zeroconfig  found %s %s %s", type_, name, zc)
         info = zc.get_service_info(type_, name)
-        _LOGGER.info("%s", info)
+        _LOGGER.info("zeroconfig added %s %s %s", type_, name, info)
         self.hosts.append(info)
 
         dispatcher_send(self._hass, SIGNAL_BARNEYMAN_DISCOVERED, info)
 
     def remove_service(self, zc: zeroconf.HaZeroconf, type_: str, name: str) -> None:
-        pass
+        info = zc.get_service_info(type_, name)
+        _LOGGER.warning("zeroconfig removed %s %s %s", type_, name, info)
 
     def update_service(self, zc: zeroconf.HaZeroconf, type_: str, name: str) -> None:
-        pass
+        info = zc.get_service_info(type_, name)
+        _LOGGER.warning("zeroconfig updated %s %s %s", type_, name, info)
 
 
 class barneymanBrowser:
