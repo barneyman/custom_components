@@ -2,6 +2,7 @@ import logging
 from typing import Any  ##, Optional, TypeVar, cast
 from homeassistant import config_entries
 import voluptuous as vol
+import uuid
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.components import onboarding, zeroconf
 
@@ -107,7 +108,7 @@ class FlowHandler(config_entries.ConfigFlow):
         # from the configuration.yaml)
         # breakpoint()
 
-        await self.async_set_unique_id(DOMAIN)
+        await self.async_set_unique_id(str(uuid.uuid4()))
 
         return await self.async_step_confirm()
 

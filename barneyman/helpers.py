@@ -4,14 +4,14 @@ import json
 import threading
 import socket
 import time
+from black import Dict
 from homeassistant.components.rest.data import RestData
 
 # from datetime import datetime, timedelta
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import httpx
-from pydantic import NoneBytes
 from sqlalchemy import false
-from .barneymanconst import LISTENING_PORT, AUTH_TOKEN, BARNEYMAN_DOMAIN
+from .barneymanconst import LISTENING_PORT, AUTH_TOKEN, BARNEYMAN_DOMAIN, BARNEYMAN_ID
 
 # import asyncio
 
@@ -400,7 +400,7 @@ class BJFListener:
         else:
             _LOGGER.info("subscribe ignored")
 
-    def build_recipient(self, device_type):
+    def build_recipient(self, device_type: str) -> Dict:
 
         if self.entity_id is None:
             return None
@@ -409,8 +409,13 @@ class BJFListener:
         if self.get_port() is not None:
             recipient["port"] = self.get_port()
         recipient[device_type] = self._ordinal
-        recipient["endpoint"] = "/api/states/" + self.entity_id  #  light.study_light
-        recipient["auth"] = self._hass.data[DOMAIN][AUTH_TOKEN]
+        recipient["endpoint"] = "/api/states/" + self.entity_id  # ie light.study_light
+        recipient["auth"] = self._hass.data[DOMAIN][
+            AUTH_TOKEN
+        ]  # created via config_flow
+        recipient["instanceid"] = self._hass.data[DOMAIN][
+            BARNEYMAN_ID
+        ]  # created via config_flow
 
         _LOGGER.debug(recipient)
 

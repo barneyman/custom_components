@@ -11,6 +11,7 @@ from .barneymanconst import (
     BARNEYMAN_DOMAIN,
     BARNEYMAN_USER_ID,
     BARNEYMAN_USER,
+    BARNEYMAN_ID,
     BARNEYMAN_ANNOUNCE_CLIENT,
 )
 
@@ -19,16 +20,19 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = BARNEYMAN_DOMAIN
 
 
-async def async_prepareMemoryData(hass, myAuthToken, listeningPort):
+async def async_prepareMemoryData(hass, myAuthToken, listeningPort, uniqueid):
     # create my 'i've created these' array
     hass.data[DOMAIN] = {
         AUTH_TOKEN: myAuthToken,
         LISTENING_PORT: listeningPort,
+        BARNEYMAN_ID: uniqueid,
         BARNEYMAN_DEVICES_SEEN + DEVICES_LIGHT: [],
         BARNEYMAN_DEVICES_SEEN + DEVICES_SENSOR: [],
         BARNEYMAN_DEVICES_SEEN + DEVICES_CAMERA: [],
     }
 
+
+# cribbed from https://github.com/home-assistant/core/blob/7cd68381f1d4f58930ffd631dfbfc7159d459832/tests/auth/test_init.py
 
 # called by async_setup_entry
 async def async_prepareUserAuth(hass, entry):
@@ -88,5 +92,8 @@ async def async_prepareUserAuth(hass, entry):
     # revoke this refresh token on unload and/or restart so that the
     # LLAT is also revoked
 
+    # get my uniqueid from the entry
+    uuid = entry.unique_id
+
     # set my memory data up
-    await async_prepareMemoryData(hass, llat, 49152)
+    await async_prepareMemoryData(hass, llat, 49152, uuid)
