@@ -20,6 +20,6 @@ LISTENING_PORT = "listeningport"
 AUTH_TOKEN = "authtoken"
 
 BARNEYMAN_USER_ID = "barneyman_user_id"
-BARNEYMAN_USER = BARNEYMAN_DOMAIN + " callback user"
-BARNEYMAN_ANNOUNCE_CLIENT = "barneyman callback"
+BARNEYMAN_USER = BARNEYMAN_DOMAIN + "_user"
+BARNEYMAN_ANNOUNCE_CLIENT = "device state announce"
 BARNEYMAN_ID = "instanceid"
