@@ -33,11 +33,13 @@ from homeassistant.core import callback
 from .helpers import (
     BJFDeviceInfo,
     BJFRestData,
-    BJFListener,
     async_do_query,
     BJFFinder,
     chopLocal,
 )
+
+from .listener import BJFListener
+
 from homeassistant.components.binary_sensor import BinarySensorEntity
 
 

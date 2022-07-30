@@ -32,12 +32,13 @@ from .barneymanconst import (
 from .helpers import (
     BJFDeviceInfo,
     BJFRestData,
-    BJFListener,
     do_post,
     async_do_query,
     BJFFinder,
     chopLocal,
 )
+
+from .listener import BJFListener
 
 
 # Home Assistant depends on 3rd party packages for API specific code.
