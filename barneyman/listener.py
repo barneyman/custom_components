@@ -2,7 +2,6 @@ import logging
 import threading
 import socket
 import time
-from black import Dict
 import json
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
