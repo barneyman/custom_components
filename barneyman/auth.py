@@ -1,7 +1,10 @@
 import logging
 import asyncio
-from homeassistant import auth
 from datetime import timedelta
+
+from homeassistant import auth
+from homeassistant.helpers.dispatcher import dispatcher_send
+
 from .barneymanconst import (
     DEVICES_LIGHT,
     DEVICES_SENSOR,
@@ -14,6 +17,7 @@ from .barneymanconst import (
     BARNEYMAN_USER,
     BARNEYMAN_ID,
     BARNEYMAN_ANNOUNCE_CLIENT,
+    SIGNAL_AUTHTOKEN_CHANGED,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -132,3 +136,4 @@ async def async_prepareUserAuth(hass, entry):
 
     # set my memory data up
     await async_prepareMemoryData(hass, llat, 49152, uuid)
+    dispatcher_send(hass, SIGNAL_AUTHTOKEN_CHANGED, llat)

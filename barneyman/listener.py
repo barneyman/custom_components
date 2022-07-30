@@ -5,8 +5,16 @@ import time
 from black import Dict
 import json
 
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
 from .helpers import BJFFinder, do_post, async_do_post
-from .barneymanconst import LISTENING_PORT, AUTH_TOKEN, BARNEYMAN_DOMAIN, BARNEYMAN_ID
+from .barneymanconst import (
+    LISTENING_PORT,
+    AUTH_TOKEN,
+    BARNEYMAN_DOMAIN,
+    BARNEYMAN_ID,
+    SIGNAL_AUTHTOKEN_CHANGED,
+)
 
 _LOGGER = logging.getLogger(__name__)
 DOMAIN = BARNEYMAN_DOMAIN
@@ -35,6 +43,11 @@ class BJFListener:
             self._listen_thread = None
             self._port = 8123
             _LOGGER.info("BJFListener called with http transport")
+            # listen for 'device found'
+            async_dispatcher_connect(
+                hass, SIGNAL_AUTHTOKEN_CHANGED, self.resetSubscription
+            )
+
         elif transport is None:
             self._listen_thread = None
             self._port = None
@@ -51,6 +64,10 @@ class BJFListener:
             self._port = hass.data[DOMAIN][LISTENING_PORT]
             # and inc it
             hass.data[DOMAIN][LISTENING_PORT] = self._port + 1
+
+    def resetSubscription(self, token):
+        _LOGGER.debug("resetting subscription %s", token)
+        self._last_subscribed = None
 
     def udp_listener(self):
         _LOGGER.info("udp_listener started port %d ...", self._port)
