@@ -183,7 +183,8 @@ async def addBJFlight(data, add_devices, hass):
             _LOGGER,
             name=hostname + "_DUC",
             update_method=rest.async_bjfupdate,
-            update_interval=timedelta(seconds=10),
+            # they shout back, so update not so often
+            update_interval=timedelta(seconds=60),
         )
 
         if "switchConfig" in config:

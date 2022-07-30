@@ -131,7 +131,8 @@ async def addBJFsensor(data, add_devices, hass):
             _LOGGER,
             name=friendly_name + "_DUC",
             update_method=rest.async_bjfupdate,
-            update_interval=timedelta(seconds=10),
+            # they shout back, so update not so often
+            update_interval=timedelta(seconds=60),
         )
 
         # add a bunch of rest sensors
