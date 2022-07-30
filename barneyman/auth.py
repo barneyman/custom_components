@@ -54,7 +54,7 @@ async def async_prepareMemoryData(hass, myAuthToken, listeningPort, uniqueid):
 
 # cribbed from https://github.com/home-assistant/core/blob/7cd68381f1d4f58930ffd631dfbfc7159d459832/tests/auth/test_init.py
 
-llat_lifetime = timedelta(minutes=5)
+llat_lifetime = timedelta(minutes=30)
 
 # called by async_setup_entry
 async def async_prepareUserAuth(hass, entry):
@@ -84,7 +84,7 @@ async def async_prepareUserAuth(hass, entry):
     if my_user is None:
         # create standard user (sys users cant have LLAT)
         my_user = await hass.auth.async_create_user(
-            BARNEYMAN_USER, group_ids=[auth.const.GROUP_ID_USER]
+            BARNEYMAN_USER, group_ids=[auth.const.GROUP_ID_ADMIN]
         )
         _LOGGER.info("created user %s with id %s", my_user.name, my_user.id)
 
