@@ -194,7 +194,7 @@ class BJFListener:
         else:
             _LOGGER.info("subscribe ignored")
 
-    def build_recipient(self, device_type: str) -> Dict:
+    def build_recipient(self, device_type: str) -> dict:
 
         if self.entity_id is None:
             return None
