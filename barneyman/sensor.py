@@ -18,6 +18,7 @@ from homeassistant.const import (
     CONF_DEVICE_CLASS,
 )
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import callback
 
 from .barneymanconst import (
     BARNEYMAN_DEVICES,
@@ -28,7 +29,6 @@ from .barneymanconst import (
     SIGNAL_BARNEYMAN_DISCOVERED,
 )
 
-from homeassistant.core import callback
 
 from .helpers import (
     BJFDeviceInfo,
@@ -312,8 +312,12 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
     @callback
     def alertUpdate(self):
         self._update_from_rest_data()
-        # if self._hass is not None:
-        #     self._hass.add_job(self.async_subscribe,"sensor")
+        if self._hass is not None:
+            self._hass.add_job(self._hass.states.set, self.entity_id, self._state)
+
+        _LOGGER.debug(
+            "Got %s from %s using %s", self._state, self.rest.data, self._value_template
+        )
 
 
 # inherit from a BinarySensorDevice so the icons work right
@@ -360,25 +364,30 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
         self._hostname = hostname
         self._attr_device_class = device_type
 
-        # # and subscribe for data updates
-        # self.async_on_remove(
-        #     self.coordinator.async_add_listener(self.async_parseData)
-        # )
-
-        self._attr_is_on = None
-
     # sent from an announcer
     def handle_incoming_packet(self, data):
         payload = json.loads(data.decode("utf-8"))
         _LOGGER.debug(payload)
-        self._attr_is_on = payload["state"]
-        _LOGGER.debug("About to set %s state to %s", self.entity_id, self.state)
-        self._hass.states.set(self.entity_id, self.state)
+        self._state = payload["state"]
+        _LOGGER.debug("About to set %s state to %s", self.entity_id, self._state)
+        self._hass.states.set(self.entity_id, self._state)
 
     @property
     def device_class(self):
         """Return the class of this device, from component DEVICE_CLASSES."""
         return self._attr_device_class
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if the binary sensor is on."""
+        return self._state == "on"
+
+    @callback
+    def update_event(self, event):
+        _LOGGER.info("update_event %s %s", self.entity_id, event)
+        if "state" in event.data:
+            self._state = event.data.get("state")
+            self._hass.add_job(self._hass.states.set, self.entity_id, self._state)
 
     @callback
     def alertUpdate(self):
@@ -387,12 +396,5 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
         if self._hass is not None:
             self._hass.add_job(self.subscribe, "sensor")
 
-        self._update_from_rest_data()
-        if self.hass is not None:
-            self.async_write_ha_state()
-
-        _LOGGER.debug(
-            "Got %s from %s using %s", self._state, self.rest.data, self._value_template
-        )
-        # work out my on state (._state is provided by the restsensor)
-        self._attr_is_on = self._state == "on"
+        # call the base
+        BJFRestSensor.alertUpdate(self)
