@@ -5,6 +5,7 @@ import time
 import json
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.core import callback
 
 from .helpers import BJFFinder, do_post, async_do_post
 from .barneymanconst import (
@@ -128,9 +129,17 @@ class BJFListener:
                 "async_added_to_hass %s No Transport Thread started", self.entity_id
             )
 
+        # subscribe to the event
+        self._hass.bus.async_listen("barneyman_" + self.entity_id, self.update_event)
+        _LOGGER.info("listening to barneyman_%s event", self.entity_id)
+
+    @callback
+    def update_event(self, data):
+        pass
+
     def subscribe(self, device_type):
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "Subscribing %s '%s' @ %s", device_type, self.entity_id, self._hostname
         )
 
@@ -141,7 +150,7 @@ class BJFListener:
         ):
 
             _LOGGER.info(
-                "Proceeding %s '%s' '%s'", device_type, self.entity_id, self._hostname
+                "Subscribing %s '%s' '%s'", device_type, self.entity_id, self._hostname
             )
 
             recipient = self.build_recipient(device_type)
@@ -157,11 +166,11 @@ class BJFListener:
             self._last_subscribed = time.time()
 
         else:
-            _LOGGER.info("subscribe ignored")
+            _LOGGER.debug("subscribe ignored")
 
     async def async_subscribe(self, device_type):
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "AsyncSubscribing %s '%s' @ '%s'",
             device_type,
             self.entity_id,
@@ -174,7 +183,10 @@ class BJFListener:
         ):
 
             _LOGGER.info(
-                "Proceeding %s '%s' '%s'", device_type, self.entity_id, self._hostname
+                "AsyncSubscribing %s '%s' '%s'",
+                device_type,
+                self.entity_id,
+                self._hostname,
             )
 
             recipient = self.build_recipient(device_type)
@@ -192,7 +204,7 @@ class BJFListener:
             self._last_subscribed = time.time()
 
         else:
-            _LOGGER.info("subscribe ignored")
+            _LOGGER.debug("subscribe ignored")
 
     def build_recipient(self, device_type: str) -> dict:
 
@@ -203,7 +215,10 @@ class BJFListener:
         if self.get_port() is not None:
             recipient["port"] = self.get_port()
         recipient[device_type] = self._ordinal
-        recipient["endpoint"] = "/api/states/" + self.entity_id  # ie light.study_light
+        #        recipient["endpoint"] = "/api/states/" + self.entity_id  # ie light.study_light
+        recipient["endpoint"] = (
+            "/api/events/barneyman_" + self.entity_id
+        )  # ie light.study_light
         recipient["auth"] = self._hass.data[DOMAIN][
             AUTH_TOKEN
         ]  # created via config_flow
