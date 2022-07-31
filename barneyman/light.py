@@ -167,6 +167,8 @@ async def addBJFlight(data, add_devices, hass):
 
     config = await async_do_query(host, "/json/config", True)
 
+    coord = None
+
     if config is not None:
 
         mac = config["mac"]
@@ -216,7 +218,7 @@ async def addBJFlight(data, add_devices, hass):
                     hostname
                 )
 
-        await coord.async_config_entry_first_refresh()
+        # await coord.async_config_entry_first_refresh()
 
     else:
         _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
@@ -225,6 +227,8 @@ async def addBJFlight(data, add_devices, hass):
 
     if add_devices is not None:
         add_devices(potentials)
+        if coord is not None:
+            await coord.async_config_entry_first_refresh()
 
         return True
 

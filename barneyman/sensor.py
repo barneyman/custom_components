@@ -114,6 +114,8 @@ async def addBJFsensor(data, add_devices, hass):
 
     config = await async_do_query(host, "/json/config", True)
 
+    coord = None
+
     if config != None:
 
         mac = config["mac"]
@@ -228,7 +230,7 @@ async def addBJFsensor(data, add_devices, hass):
                             BARNEYMAN_DEVICES_SEEN + DEVICES_SENSOR
                         ].append(hostname)
 
-        await coord.async_config_entry_first_refresh()
+        # await coord.async_config_entry_first_refresh()
 
     else:
         _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
@@ -239,6 +241,8 @@ async def addBJFsensor(data, add_devices, hass):
 
     if add_devices is not None:
         add_devices(sensorsToAdd)
+        if coord is not None:
+            await coord.async_config_entry_first_refresh()
         return True
 
     return False
@@ -261,7 +265,12 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
         element,
         config,
     ):
-        _LOGGER.info("Creating sensor.'%s' - '%s'", name, jsonSensorQuery)
+        _LOGGER.info(
+            "Creating BJFRestSensor.'%s' type %s - '%s'",
+            name,
+            device_type,
+            jsonSensorQuery,
+        )
 
         BJFFinder.__init__(self, hass, hostname)
 
@@ -343,43 +352,33 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
 
         BJFListener.__init__(self, transport, hass, hostname)
 
+        _LOGGER.info("Creating BJFBinarySensor.'%s' type %s", name, device_type)
+
         self._name = name
         self._hass = hass
         self._ordinal = ordinal
         self._hostname = hostname
-        self._deviceClass = device_type
+        self._attr_device_class = device_type
 
         # # and subscribe for data updates
         # self.async_on_remove(
         #     self.coordinator.async_add_listener(self.async_parseData)
         # )
 
-        self._is_on = None
+        self._attr_is_on = None
 
     # sent from an announcer
     def handle_incoming_packet(self, data):
         payload = json.loads(data.decode("utf-8"))
         _LOGGER.debug(payload)
-        self._is_on = payload["state"]
+        self._attr_is_on = payload["state"]
         _LOGGER.debug("About to set %s state to %s", self.entity_id, self.state)
         self._hass.states.set(self.entity_id, self.state)
 
     @property
-    def is_on(self):
-        """Return true if the binary sensor is on."""
-        _LOGGER.debug("is_on called %s state %s ", self.entity_id, self._state)
-        return self._is_on
-
-    # @property
-    # def state(self):
-    #     """Return the state of the binary sensor."""
-    #     _LOGGER.debug("state called %s state %s ", self.entity_id, self._state)
-    #     return self._is_on  # STATE_ON if self._is_on==True else STATE_OFF
-
-    @property
     def device_class(self):
         """Return the class of this device, from component DEVICE_CLASSES."""
-        return self._deviceClass
+        return self._attr_device_class
 
     @callback
     def alertUpdate(self):
@@ -396,4 +395,4 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
             "Got %s from %s using %s", self._state, self.rest.data, self._value_template
         )
         # work out my on state (._state is provided by the restsensor)
-        self._is_on = self._state
+        self._attr_is_on = self._state == "on"
