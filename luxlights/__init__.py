@@ -233,11 +233,11 @@ class luxLightInstance(Entity):
             _LOGGER.warning("None for hcountBinary results, bailing")
             return
 
-        if lux.state == "unavailable":
+        if lux.state in ["unavailable","unknown"]:
             _LOGGER.warning("lux sensor unavailable, bailing")
             return
 
-        if hcountBinary.state == "unavailable":
+        if hcountBinary.state in ["unavailable","unknown"]:
             _LOGGER.warning("headcount sensor unavailable, bailing")
             return
 
