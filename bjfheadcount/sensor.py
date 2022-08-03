@@ -75,3 +75,5 @@ class HeadCountSensor(Entity):
         _LOGGER.info("headcount %d",(home))
 
         self._state = home
+        # then force HA to notice
+        self._hass.states.set(self.entity_id, self._state)

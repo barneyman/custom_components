@@ -92,7 +92,8 @@ CONFIG_SCHEMA = vol.Schema(
                                     ),
                                 }
                             ),
-                        }
+                            vol.Optional("veto_sensors", default=[]): cv.entity_ids,
+                        },
                     ],
                 )
             }
@@ -125,6 +126,12 @@ class luxLightInstance(Entity):
 
         self._absentDetail = config["absent"]
         self._presentDetail = config["present"]
+
+        if "veto_sensors" in config:
+            self._veto_sensors=config["veto_sensors"]
+        else:
+            self._veto_sensors=[]
+
 
         # prime the storing
         hass.data[DOMAIN] = {self._name: {}}
@@ -233,16 +240,17 @@ class luxLightInstance(Entity):
             _LOGGER.warning("None for hcountBinary results, bailing")
             return
 
-        if lux.state == "unavailable":
-            _LOGGER.warning("lux sensor unavailable, bailing")
+        if lux.state in ["unavailable","unknown"]:
+            _LOGGER.info("lux sensor unavailable, bailing")
             return
 
-        if hcountBinary.state == "unavailable":
-            _LOGGER.warning("headcount sensor unavailable, bailing")
+        if hcountBinary.state in ["unavailable","unknown"]:
+            _LOGGER.info("headcount sensor unavailable, bailing")
             return
 
         # check to see we're not locked out
-        for each in ["sensor.sunload_southside", "sensor.sunload_northside"]:
+        for each in self._veto_sensors: #["sensor.sunload_southside", "sensor.sunload_northside"]:
+            _LOGGER.debug("checking veto_sensor %s", each)
             if self._hass.states.is_state(each, "True"):
                 _LOGGER.info("headcount sensor disabled by %s, bailing", (each))
                 return
@@ -414,6 +422,7 @@ def setup(hass, baseConfig):
     # iterate thru the items
     for eachInstance in config["instances"]:
         luxInstances.append(luxLightInstance(hass, eachInstance))
+
 
     # Return boolean to indicate that initialization was successfully.
     return True
