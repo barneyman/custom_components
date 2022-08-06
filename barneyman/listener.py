@@ -5,7 +5,7 @@ import time
 import json
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.core import callback
+from homeassistant.core import callback, CALLBACK_TYPE
 
 from .helpers import BJFFinder, do_post, async_do_post
 from .barneymanconst import (
@@ -130,8 +130,16 @@ class BJFListener:
             )
 
         # subscribe to the event
-        self._hass.bus.async_listen("barneyman_" + self.entity_id, self.update_event)
+        self.async_on_remove(
+            self._hass.bus.async_listen(
+                "barneyman_" + self.entity_id, self.update_event
+            )
+        )
         _LOGGER.info("listening to barneyman_%s event", self.entity_id)
+
+    @callback
+    def async_on_remove(self, func: CALLBACK_TYPE) -> None:
+        pass
 
     @callback
     def update_event(self, data):
