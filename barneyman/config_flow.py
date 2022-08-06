@@ -90,8 +90,8 @@ class FlowHandler(config_entries.ConfigFlow):
 
         # check we're not already doing this in a configflow
         if self._async_in_progress() or self._async_current_entries():
-            _LOGGER.warning("barneyman is already being configured")
-            return self.async_abort(reason="already_in_progress")
+            _LOGGER.info("barneyman is already being configured")
+            return self.async_abort(reason="already_configured")
 
         # and check we haven't already seen this host, and recorded it as a configentry device
         _LOGGER.debug(
