@@ -89,7 +89,7 @@ class FlowHandler(config_entries.ConfigFlow):
         _LOGGER.debug(discovery_info.properties)
 
         # check we're not already doing this in a configflow
-        if len(self._async_in_progress()) > 1:
+        if if self._async_in_progress() or self._async_current_entries():
             _LOGGER.warning("barneyman is already being configured")
             return self.async_abort(reason="already_in_progress")
 
