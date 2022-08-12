@@ -222,6 +222,8 @@ async def addBJFlight(data, add_devices, hass):
 
     else:
         _LOGGER.error("Failed to query %s at onboarding - device not added", hostname)
+        if hostname in hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_LIGHT]:
+            hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_LIGHT].remove(hostname)
 
     wip.remove(hostname)
 
