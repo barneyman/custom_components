@@ -229,3 +229,5 @@ class BJFRestData(RestData, BJFFinder):
         self._resource = self.get_url()
 
         await RestData.async_update(self)
+
+        return self.data
