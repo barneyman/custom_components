@@ -42,13 +42,24 @@ async def async_cleanupTokens(hass, user, client_name):
 
 async def async_prepareMemoryData(hass, myAuthToken, listeningPort, uniqueid):
     # create my 'i've created these' array
+    lightsSeen=[]
+    sensorsSeen=[]
+    camerasSeen=[]
+
+    if DOMAIN in hass.data:
+        # preserve what we've seen
+        lightsSeen=hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_LIGHT]
+        sensorsSeen=hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_SENSOR]
+        camerasSeen=hass.data[DOMAIN][BARNEYMAN_DEVICES_SEEN + DEVICES_CAMERA]
+
+
     hass.data[DOMAIN] = {
         AUTH_TOKEN: myAuthToken,
         LISTENING_PORT: listeningPort,
         BARNEYMAN_ID: uniqueid,
-        BARNEYMAN_DEVICES_SEEN + DEVICES_LIGHT: [],
-        BARNEYMAN_DEVICES_SEEN + DEVICES_SENSOR: [],
-        BARNEYMAN_DEVICES_SEEN + DEVICES_CAMERA: [],
+        BARNEYMAN_DEVICES_SEEN + DEVICES_LIGHT: lightsSeen,
+        BARNEYMAN_DEVICES_SEEN + DEVICES_SENSOR: sensorsSeen,
+        BARNEYMAN_DEVICES_SEEN + DEVICES_CAMERA: camerasSeen,
     }
 
 
@@ -115,9 +126,10 @@ async def async_prepareUserAuth(hass, entry):
         )
         await asyncio.sleep(offset_from_now.total_seconds())
         _LOGGER.debug("async_remove_llat awake")
+        # and around again
         await async_prepareUserAuth(hass, entry)
 
-    # create a task that will sleep until the LLAT expires and remote it
+    # create a task that will sleep until the LLAT expires and remove it
     hass.async_create_task(async_remove_llat(llat_lifetime))
 
     # generate an LLAT
