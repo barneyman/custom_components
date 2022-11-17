@@ -23,7 +23,7 @@ class barneymanListener(ServiceListener):
         info = zc.get_service_info(type_, name)
         _LOGGER.info("zeroconfig added %s %s %s", type_, name, info)
         self.hosts.append(info)
-
+        # send the signal that everyone is listening for
         dispatcher_send(self._hass, SIGNAL_BARNEYMAN_DISCOVERED, info)
 
     def remove_service(self, zc: zeroconf.HaZeroconf, type_: str, name: str) -> None:
