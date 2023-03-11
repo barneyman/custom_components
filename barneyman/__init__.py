@@ -55,7 +55,7 @@ async def async_setup_entry(hass, entry):
 
     async def async_remove_llat(offset_from_now: timedelta):
         while True:
-            _LOGGER.warn(
+            _LOGGER.info(
                 "async_remove_llat sleeping for %ld secs", offset_from_now.total_seconds()
             )
             await asyncio.sleep(offset_from_now.total_seconds())
