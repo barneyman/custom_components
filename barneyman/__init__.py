@@ -14,6 +14,10 @@ from .barneymanconst import (
     BARNEYMAN_USER_ID,
 )
 
+import asyncio
+
+from datetime import timedelta
+
 from .discovery import barneymanBrowser
 from .auth import async_prepareUserAuth
 
@@ -44,7 +48,23 @@ async def async_setup_entry(hass, entry):
             "Please remove the Devices array from the barneyman config_entry.data"
         )
 
-    await async_prepareUserAuth(hass, entry)
+    llat_lifetime = timedelta(minutes=60)
+
+
+    await async_prepareUserAuth(hass, entry, llat_lifetime)
+
+    async def async_remove_llat(offset_from_now: timedelta):
+        while True:
+            _LOGGER.warn(
+                "async_remove_llat sleeping for %ld secs", offset_from_now.total_seconds()
+            )
+            await asyncio.sleep(offset_from_now.total_seconds())
+            _LOGGER.debug("async_remove_llat awake")
+            # and around again
+            await async_prepareUserAuth(hass, entry,llat_lifetime)
+
+    # then start a background task that will update the auth token
+    entry.async_create_background_task(hass,async_remove_llat(llat_lifetime),"LLAT refresh")
 
     # now set up my discovery class
     # barneymanDiscovery.set_zeroconf(await zeroconf.async_get_instance(hass))
@@ -56,10 +76,9 @@ async def async_setup_entry(hass, entry):
     _LOGGER.info("forwarding to platforms %s %s", entry.title, entry.data)
 
     # use the current stored config, some things may not respond in time
-    hass.config_entries.async_setup_platforms(
+    await hass.config_entries.async_forward_entry_setups(
         entry, [DEVICES_LIGHT, DEVICES_SENSOR, DEVICES_CAMERA]
     )
-
     return True
 
 

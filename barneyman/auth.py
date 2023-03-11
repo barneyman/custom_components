@@ -1,5 +1,4 @@
 import logging
-import asyncio
 from datetime import timedelta
 
 from homeassistant import auth
@@ -65,10 +64,9 @@ async def async_prepareMemoryData(hass, myAuthToken, listeningPort, uniqueid):
 
 # cribbed from https://github.com/home-assistant/core/blob/7cd68381f1d4f58930ffd631dfbfc7159d459832/tests/auth/test_init.py
 
-llat_lifetime = timedelta(minutes=30)
 
 # called by async_setup_entry
-async def async_prepareUserAuth(hass, entry):
+async def async_prepareUserAuth(hass, entry, llat_lifetime:timedelta):
 
     _LOGGER.debug("async_prepareUserAuth")
 
@@ -93,7 +91,7 @@ async def async_prepareUserAuth(hass, entry):
 
     # bootstrap - create a user
     if my_user is None:
-        # create standard user (sys users cant have LLAT)
+        # create standard user (sys users cant have LLAT)async_create_background_task
         my_user = await hass.auth.async_create_user(
             BARNEYMAN_USER, group_ids=[auth.const.GROUP_ID_ADMIN]
         )
@@ -120,17 +118,6 @@ async def async_prepareUserAuth(hass, entry):
             access_token_expiration=llat_lifetime,
         )
 
-    async def async_remove_llat(offset_from_now: timedelta):
-        _LOGGER.debug(
-            "async_remove_llat sleeping for %ld secs", offset_from_now.total_seconds()
-        )
-        await asyncio.sleep(offset_from_now.total_seconds())
-        _LOGGER.debug("async_remove_llat awake")
-        # and around again
-        await async_prepareUserAuth(hass, entry)
-
-    # create a task that will sleep until the LLAT expires and remove it
-    hass.async_create_task(async_remove_llat(llat_lifetime))
 
     # generate an LLAT
     _LOGGER.info("creating LLAT")
