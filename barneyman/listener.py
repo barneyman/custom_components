@@ -43,7 +43,7 @@ class BJFListener:
             self._listen_thread = None
             self._port = 8123
             _LOGGER.info("BJFListener called with http transport")
-            # listen for 'device found'
+            # listen for 'auth-token-changed signal'
             async_dispatcher_connect(
                 hass, SIGNAL_AUTHTOKEN_CHANGED, self.resetSubscription
             )
@@ -148,7 +148,7 @@ class BJFListener:
     def subscribe(self, device_type):
 
         _LOGGER.debug(
-            "Subscribing %s '%s' @ %s", device_type, self.entity_id, self._hostname
+            "subscribe %s '%s' @ %s ...", device_type, self.entity_id, self._hostname
         )
 
         # we do this periodicall, in case the remote device has been rebooted
