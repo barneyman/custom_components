@@ -313,10 +313,10 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
     def alertUpdate(self):
         self._update_from_rest_data()
         if self._hass is not None:
-            self._hass.add_job(self._hass.states.set, self.entity_id, self._state)
+            self._hass.add_job(self._hass.states.set, self.entity_id, self._attr_native_value)
 
         _LOGGER.debug(
-            "Got %s from %s using %s", self._state, self.rest.data, self._value_template
+            "Got %s from %s using %s", self._attr_native_value, self.rest.data, self._value_template
         )
 
 
@@ -368,9 +368,9 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
     def handle_incoming_packet(self, data):
         payload = json.loads(data.decode("utf-8"))
         _LOGGER.debug(payload)
-        self._state = payload["state"]
-        _LOGGER.debug("About to set %s state to %s", self.entity_id, self._state)
-        self._hass.states.set(self.entity_id, self._state)
+        self._attr_native_value = payload["state"]
+        _LOGGER.debug("About to set %s state to %s", self.entity_id, self._attr_native_value)
+        self._hass.states.set(self.entity_id, self._attr_native_value)
 
     @property
     def device_class(self):
@@ -380,14 +380,14 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        return self._state == "on"
+        return self._attr_native_value == "on"
 
     @callback
     def update_event(self, event):
         _LOGGER.info("update_event %s %s", self.entity_id, event)
         if "state" in event.data:
-            self._state = event.data.get("state")
-            self._hass.add_job(self._hass.states.set, self.entity_id, self._state)
+            self._attr_native_value = event.data.get("state")
+            self._hass.add_job(self._hass.states.set, self.entity_id, self._attr_native_value)
 
     @callback
     def alertUpdate(self):
