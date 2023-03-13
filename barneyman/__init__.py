@@ -48,7 +48,7 @@ async def async_setup_entry(hass, entry):
             "Please remove the Devices array from the barneyman config_entry.data"
         )
 
-    llat_lifetime = timedelta(minutes=60)
+    llat_lifetime = timedelta(days=30)
 
 
     await async_prepareUserAuth(hass, entry, llat_lifetime)

@@ -66,8 +66,9 @@ class BJFListener:
             hass.data[DOMAIN][LISTENING_PORT] = self._port + 1
 
     def resetSubscription(self, token):
-        _LOGGER.debug("resetting subscription %s", token)
+        _LOGGER.debug("resetting subscription %s for %s", token, self._hostname)
         self._last_subscribed = None
+        #self.subscribe("sensor")
 
     def udp_listener(self):
         _LOGGER.info("udp_listener started port %d ...", self._port)
