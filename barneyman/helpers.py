@@ -97,44 +97,46 @@ async def async_do_query(
 
     _LOGGER.info("barneyman async_do_query to %s", built_url)
 
-    try:
+    for attempts in range(3):
 
-        async with httpx.AsyncClient() as client:
-            response = await client.request(
-                httpmethod,
-                built_url,
-                headers=None,
-                params=None,
-                auth=None,
-                data=json_body,
-                timeout=timeout,
+        try:
+
+            async with httpx.AsyncClient() as client:
+                response = await client.request(
+                    httpmethod,
+                    built_url,
+                    headers=None,
+                    params=None,
+                    auth=None,
+                    data=json_body,
+                    timeout=timeout,
+                )
+                response.raise_for_status()
+                if return_json:
+                    _LOGGER.info("barneyman async_do_query returned  %s", response.text)
+                    return json.loads(response.text)
+                else:
+                    return True
+
+        except httpx.HTTPStatusError as exc:
+            _LOGGER.error(
+                "Error response '%s' while requesting %s.",
+                str(exc.response.status_code),
+                exc.request.url,
             )
-            response.raise_for_status()
-            if return_json:
-                _LOGGER.info("barneyman async_do_query returned  %s", response.text)
-                return json.loads(response.text)
-            else:
-                return True
 
-    except httpx.HTTPStatusError as exc:
-        _LOGGER.error(
-            "Error response '%s' while requesting %s.",
-            str(exc.response.status_code),
-            exc.request.url,
-        )
+        except httpx.RequestError as exc:
+            _LOGGER.error(
+                "An error '%s' occurred while requesting %s.", exc, exc.request.url
+            )
 
-    except httpx.RequestError as exc:
-        _LOGGER.error(
-            "An error '%s' occurred while requesting %s.", exc, exc.request.url
-        )
-
-    except Exception as exception:
-        _LOGGER.error(
-            "barneyman async_do_query exception '%s' host '%s' url '%s'",
-            str(exception),
-            hostname,
-            url,
-        )
+        except Exception as exception:
+            _LOGGER.error(
+                "barneyman async_do_query exception '%s' host '%s' url '%s'",
+                str(exception),
+                hostname,
+                url,
+            )
 
     return None
 
@@ -143,6 +145,9 @@ class BJFDeviceInfo:
     def __init__(self, config, mac):
         self._config = config
         self._mac = mac
+
+        # TODO remove this when they're updated
+        self._config_url = config["name"] if config["name"].find("_")==-1 else config["ip"]
 
     # https://developers.home-assistant.io/docs/device_registry_index/
     @property
@@ -156,7 +161,7 @@ class BJFDeviceInfo:
             "model": self._config["version"].split("|")[0],
             "manufacturer": BARNEYMAN_DOMAIN,
             "sw_version": self._config["version"].split("|")[1],
-            "configuration_url": "http://" + self._config["ip"],
+            "configuration_url": "http://" + self._config_url,
         }
 
 
