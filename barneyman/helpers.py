@@ -7,6 +7,7 @@ from homeassistant.components.rest.data import RestData
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import httpx
 from .barneymanconst import BARNEYMAN_DOMAIN
+from homeassistant.components.rest.const import DEFAULT_ENCODING
 
 # import asyncio
 
@@ -201,7 +202,7 @@ class BJFFinder:
 class BJFRestData(RestData, BJFFinder):
     def __init__(self, hass, hostname, method, auth, headers, data, verify_ssl=False):
         RestData.__init__(
-            self, hass, method, None, auth, headers, None, data, verify_ssl
+            self, hass, method, None,DEFAULT_ENCODING, auth, headers, None, data, verify_ssl=verify_ssl, timeout=5
         )
 
         BJFFinder.__init__(self, hass, hostname)
