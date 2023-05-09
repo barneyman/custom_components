@@ -23,7 +23,6 @@ def chopLocal(hostname):
 
 
 def do_exists(hostname):
-
     json_ret = do_query(hostname, "/json/config", True, timeout=2)
 
     _LOGGER.info("do_exists %s ", hostname)
@@ -99,9 +98,7 @@ async def async_do_query(
     _LOGGER.info("barneyman async_do_query to %s", built_url)
 
     for attempts in range(3):
-
         try:
-
             async with httpx.AsyncClient() as client:
                 response = await client.request(
                     httpmethod,
@@ -148,7 +145,9 @@ class BJFDeviceInfo:
         self._mac = mac
 
         # TODO remove this when they're updated
-        self._config_url = config["name"] if config["name"].find("_")==-1 else config["ip"]
+        self._config_url = (
+            config["name"] if config["name"].find("_") == -1 else config["ip"]
+        )
 
     # https://developers.home-assistant.io/docs/device_registry_index/
     @property
@@ -194,7 +193,6 @@ class BJFFinder:
         self._hostname = hostname
 
     def get_ip_address(self):
-
         _LOGGER.debug("async_get_ip_address for %s", (self._hostname))
 
         return self._hostname
@@ -207,7 +205,17 @@ class BJFFinder:
 class BJFRestData(RestData, BJFFinder):
     def __init__(self, hass, hostname, method, auth, headers, data, verify_ssl=False):
         RestData.__init__(
-            self, hass, method, None,DEFAULT_ENCODING, auth, headers, None, data, verify_ssl=verify_ssl, timeout=5
+            self,
+            hass,
+            method,
+            None,
+            DEFAULT_ENCODING,
+            auth,
+            headers,
+            None,
+            data,
+            verify_ssl,
+            "python_default",
         )
 
         BJFFinder.__init__(self, hass, hostname)
@@ -216,7 +224,6 @@ class BJFRestData(RestData, BJFFinder):
         self._hostname = hostname
 
     def get_url(self):
-
         endip = self.get_ip_address()
         if endip is None:
             return None
@@ -228,7 +235,6 @@ class BJFRestData(RestData, BJFFinder):
         return url
 
     async def async_bjfupdate(self):
-
         _LOGGER.debug("async_update for %s %s", self._hostname, str(self._verify_ssl))
         # change _resource ** in the parent **
         # super(BJFRestData,self)._resource=self.get_url()
