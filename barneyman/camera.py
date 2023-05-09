@@ -31,7 +31,6 @@ DOMAIN = BARNEYMAN_DOMAIN
 # called from entity_platform.py line 129
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
-
     _LOGGER.debug("CAMERA async_setup_entry: %s", config_entry.data)
 
     async def async_setupDevice(z):
@@ -65,7 +64,7 @@ async def add_bjf_camera(data, add_devices, hass):
     hostname = chopLocal(data.server)
     # TODO - i've got - and _ mismatches between host names and mdns names in my esp code
     # so fix that, then remove this
-    hostname = ".".join(str(c) for c in data.addresses[0])
+    # hostname = ".".join(str(c) for c in data.addresses[0])
     # remove .local.
     host = hostname
 
@@ -89,7 +88,6 @@ async def add_bjf_camera(data, add_devices, hass):
     config = await async_do_query(host, "/json/config", True)
 
     if config is not None:
-
         mac = config["mac"]
 
         # built early, in case it's shared
@@ -102,7 +100,6 @@ async def add_bjf_camera(data, add_devices, hass):
         # add a bunch of cameras
         if "cameraConfig" in config:
             for each_camera in config["cameraConfig"]:
-
                 potential = None
 
                 _LOGGER.info("Potential Camera")

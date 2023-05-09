@@ -58,7 +58,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({vol.Optional(CONF_DEVICES): cv.ensure_
 
 # this gets called if you're a platform under a component
 def setup_platform(hass, config, add_devices, discovery_info=None):
-
     devices = []
 
     if discovery_info != None:
@@ -133,15 +132,15 @@ async def async_setup(hass, config_entry):
 
 wip = []
 
+
 # TODO - find all the lights, and inc the ordinal
 async def addBJFlight(data, add_devices, hass):
-
     potentials = []
 
     hostname = chopLocal(data.server)
     # TODO - i've got - and _ mismatches between host names and mdns names in my esp code
     # so fix that, then remove this
-    hostname = ".".join(str(c) for c in data.addresses[0])
+    # hostname = ".".join(str(c) for c in data.addresses[0])
     # remove .local.
     host = hostname
 
@@ -170,7 +169,6 @@ async def addBJFlight(data, add_devices, hass):
     coord = None
 
     if config is not None:
-
         mac = config["mac"]
 
         friendly_name = (
@@ -191,7 +189,6 @@ async def addBJFlight(data, add_devices, hass):
 
         if "switchConfig" in config:
             for switchConfig in config["switchConfig"]:
-
                 # switch may have the ability to prod us
                 transport = None
                 if "impl" in switchConfig:
@@ -262,7 +259,6 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
         self.async_on_remove(coord.async_add_listener(self.parseData))
 
     def handle_incoming_packet(self, data):
-
         _LOGGER.warning("Publish from %s", self._hostname)
 
         payload = json.loads(data.decode("utf-8"))
@@ -318,7 +314,6 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
 
     @callback
     def parseData(self):
-
         _LOGGER.info("light %s parseData has been called", (self._hostname))
 
         if self._hass is not None:
@@ -334,9 +329,7 @@ class bjfESPLight(CoordinatorEntity, BJFDeviceInfo, BJFListener, LightEntity):
         _LOGGER.debug(jsonData)
 
         if jsonData is not None:
-
             try:
-
                 self._name = (
                     jsonData["friendlyName"]
                     if "friendlyName" in jsonData

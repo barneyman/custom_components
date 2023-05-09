@@ -7,9 +7,7 @@ from homeassistant.components.rest.sensor import (
     CONF_JSON_ATTRS,
     CONF_JSON_ATTRS_PATH,
 )
-from homeassistant.components.sensor import (
-    CONF_STATE_CLASS,
-)
+from homeassistant.components.sensor import CONF_STATE_CLASS, SensorStateClass
 from homeassistant.const import (
     CONF_RESOURCE_TEMPLATE,
     CONF_FORCE_UPDATE,
@@ -51,7 +49,6 @@ DOMAIN = BARNEYMAN_DOMAIN
 # called from entity_platform.py line 129
 # this gets forwarded from the component async_setup_entry
 async def async_setup_entry(hass, config_entry, async_add_devices):
-
     _LOGGER.debug("SENSOR async_setup_entry: %s", config_entry.data)
 
     async def async_setupDevice(z):
@@ -83,13 +80,12 @@ wip = []
 
 
 async def addBJFsensor(data, add_devices, hass):
-
     sensorsToAdd = []
 
     hostname = chopLocal(data.server)
     # TODO - i've got - and _ mismatches between host names and mdns names in my esp code
     # so fix that, then remove this
-    hostname = ".".join(str(c) for c in data.addresses[0])
+    # hostname = ".".join(str(c) for c in data.addresses[0])
     # remove .local.
     host = hostname
 
@@ -117,7 +113,6 @@ async def addBJFsensor(data, add_devices, hass):
     coord = None
 
     if config != None:
-
         mac = config["mac"]
 
         # built early, in case it's shared
@@ -146,7 +141,6 @@ async def addBJFsensor(data, add_devices, hass):
 
                     # special case - if there's an instant sensor - PIR generally
                     if "impl" in element:
-
                         sensorValue = Template(
                             '{{ value_json["sensorState"]['
                             + str(eachSensor["sensor"])
@@ -286,7 +280,7 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
             CONF_JSON_ATTRS_PATH: None,
             CONF_UNIT_OF_MEASUREMENT: unit,
             CONF_DEVICE_CLASS: device_type,
-            CONF_STATE_CLASS: "measurement",
+            CONF_STATE_CLASS: SensorStateClass.MEASUREMENT,
         }
 
         RestSensor.__init__(self, hass, coord, rest, rsconfig, name)
@@ -313,10 +307,15 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
     def alertUpdate(self):
         self._update_from_rest_data()
         if self._hass is not None:
-            self._hass.add_job(self._hass.states.set, self.entity_id, self._attr_native_value)
+            self._hass.add_job(
+                self._hass.states.set, self.entity_id, self._attr_native_value
+            )
 
         _LOGGER.debug(
-            "Got %s from %s using %s", self._attr_native_value, self.rest.data, self._value_template
+            "Got %s from %s using %s",
+            self._attr_native_value,
+            self.rest.data,
+            self._value_template,
         )
 
 
@@ -369,7 +368,9 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
         payload = json.loads(data.decode("utf-8"))
         _LOGGER.debug(payload)
         self._attr_native_value = payload["state"]
-        _LOGGER.debug("About to set %s state to %s", self.entity_id, self._attr_native_value)
+        _LOGGER.debug(
+            "About to set %s state to %s", self.entity_id, self._attr_native_value
+        )
         self._hass.states.set(self.entity_id, self._attr_native_value)
 
     @property
@@ -387,7 +388,9 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
         _LOGGER.info("update_event %s %s", self.entity_id, event)
         if "state" in event.data:
             self._attr_native_value = event.data.get("state")
-            self._hass.add_job(self._hass.states.set, self.entity_id, self._attr_native_value)
+            self._hass.add_job(
+                self._hass.states.set, self.entity_id, self._attr_native_value
+            )
 
     @callback
     def alertUpdate(self):
