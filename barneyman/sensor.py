@@ -7,7 +7,10 @@ from homeassistant.components.rest.sensor import (
     CONF_JSON_ATTRS,
     CONF_JSON_ATTRS_PATH,
 )
-from homeassistant.components.sensor import CONF_STATE_CLASS, SensorStateClass
+from homeassistant.components.sensor import (
+    CONF_STATE_CLASS,
+    SensorStateClass,
+)
 from homeassistant.const import (
     CONF_RESOURCE_TEMPLATE,
     CONF_FORCE_UPDATE,
@@ -18,8 +21,9 @@ from homeassistant.const import (
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.core import callback
 
+from homeassistant.components.binary_sensor import BinarySensorEntity
+
 from .barneymanconst import (
-    BARNEYMAN_DEVICES,
     BARNEYMAN_DEVICES_SEEN,
     DEVICES_SENSOR,
     BARNEYMAN_DOMAIN,
@@ -37,8 +41,6 @@ from .helpers import (
 )
 
 from .listener import BJFListener
-
-from homeassistant.components.binary_sensor import BinarySensorEntity
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -306,10 +308,11 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
     @callback
     def alertUpdate(self):
         self._update_from_rest_data()
-        if self._hass is not None:
-            self._hass.add_job(
-                self._hass.states.set, self.entity_id, self._attr_native_value
-            )
+        # if self._hass is not None:
+        #     self._hass.add_job(
+        #         self._hass.states.set, self.entity_id, self._attr_native_value
+        #     )
+        self.async_write_ha_state()
 
         _LOGGER.debug(
             "Got %s from %s using %s",
