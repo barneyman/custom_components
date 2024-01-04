@@ -391,9 +391,10 @@ class BJFBinarySensor(BJFListener, BinarySensorEntity, BJFRestSensor):  # , ):
         _LOGGER.info("update_event %s %s", self.entity_id, event)
         if "state" in event.data:
             self._attr_native_value = event.data.get("state")
-            self._hass.add_job(
-                self._hass.states.set, self.entity_id, self._attr_native_value
-            )
+            # self._hass.add_job(
+            #     self._hass.states.set, self.entity_id, self._attr_native_value
+            # )
+            self.async_write_ha_state()
 
     @callback
     def alertUpdate(self):
