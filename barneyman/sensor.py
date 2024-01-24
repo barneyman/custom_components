@@ -308,11 +308,12 @@ class BJFRestSensor(CoordinatorEntity, BJFDeviceInfo, BJFFinder, RestSensor):
     @callback
     def alertUpdate(self):
         self._update_from_rest_data()
-        if self._hass is not None:
-            self._hass.add_job(
-                self._hass.states.set, self.entity_id, self._attr_native_value
-            )
-        #self.async_write_ha_state()
+        # if self._hass is not None:
+        #     self._hass.add_job(
+        #         self._hass.states.set, self.entity_id, self._attr_native_value
+        #     )
+
+        self.async_write_ha_state()
 
         _LOGGER.debug(
             "Got %s from %s using %s",
