@@ -35,6 +35,23 @@ async def async_setup(hass, baseConfig):
     """Set up is called when Home Assistant is loading our component."""
 
     _LOGGER.debug("barneyman async_setup called %s", baseConfig)
+
+    # set up a service to 'fire' a sensor
+    def handle_callback(call):
+        _LOGGER.warning(
+            "handle_callback"
+        )
+
+
+        """Handle the service call."""
+        name = call.data.get("entity", None)
+        state = call.data.get("state", None)
+
+        if name is not None and state is not None:
+            hass.states.set(name, state)
+
+    hass.services.async_register(DOMAIN, "entity_callback", handle_callback)
+
     return True
 
 
