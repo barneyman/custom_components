@@ -134,7 +134,7 @@ class luxLightInstance(Entity):
 
 
         # prime the storing
-        hass.data[DOMAIN] = {self._name: {}}
+        hass.data[DOMAIN][self._name]={}
 
         lastKnownRunState = {"state": "unknown", "scene": "unknown"}
         self.saveState(lastKnownRunState)
@@ -334,12 +334,19 @@ class luxLightInstance(Entity):
         return
 
     def saveState(self, data):
+        _LOGGER.debug("saving state for {} ...".format(self._name))
+
         self._hass.data[DOMAIN][self._name] = json.dumps(data)
+#	LOGGER.info(json.dumps(data))
+
         self._hass.states.set(
             "sensor.{}_luxlights".format(self._name), data["state"], data
         )
 
+        _LOGGER.info(self._hass.data[DOMAIN])
+
     def loadState(self):
+        _LOGGER.info(self._hass.data[DOMAIN])
         return json.loads(self._hass.data[DOMAIN][self._name])
 
     # only turn off if no-one present
@@ -418,6 +425,8 @@ def setup(hass, baseConfig):
     _LOGGER.info("luxlights setup")
 
     config = baseConfig[DOMAIN]
+
+    hass.data[DOMAIN]={}
 
     # iterate thru the items
     for eachInstance in config["instances"]:
