@@ -68,8 +68,8 @@ CONFIG_SCHEMA = vol.Schema(
                             vol.Required("presence_binary"): cv.string,
                             vol.Required("lux_sensor"): cv.string,
                             vol.Required("off_scene"): cv.string,
-                            "softOff": offSchema,
-                            "hardOff": offSchema,
+                            "vacantOff": offSchema,
+                            "presentOff": offSchema,
                             "reset": offSchema,
                             vol.Optional("jitter", default=30): vol.All(
                                 vol.Coerce(float), vol.Range(min=0, max=50)
@@ -194,14 +194,14 @@ class luxLightInstance(Entity):
     def scheduleSoftOffTimes(self):
 
         # get my hard/soft off times
-        self._softOff = self.timeStringToDateTime(self._config["softOff"]["at"])
+        self._softOff = self.timeStringToDateTime(self._config["vacantOff"]["at"])
         _LOGGER.info("Soft Off times is %s", (self._softOff))
         track_point_in_time(self._hass, self.softOff, self._softOff)
 
     def scheduleHardOffTimes(self):
 
         # get my hard/soft off times
-        self._hardOff = self.timeStringToDateTime(self._config["hardOff"]["at"])
+        self._hardOff = self.timeStringToDateTime(self._config["presentOff"]["at"])
         _LOGGER.info("Hard Off times is %s", (self._hardOff))
         track_point_in_time(self._hass, self.hardOff, self._hardOff)
 
@@ -378,7 +378,7 @@ class luxLightInstance(Entity):
         # and reschedule
         self.scheduleSoftOffTimes()
 
-    # this is called by track_point_in_time so needs a rednudant  arg
+    # this is called by track_point_in_time so needs a redundant arg
     # i need to understand why
     def hardOff(self, call):
         # pylint: disable=unused-argument
