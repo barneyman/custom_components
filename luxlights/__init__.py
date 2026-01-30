@@ -248,11 +248,15 @@ class luxLightInstance(Entity):
             _LOGGER.info("headcount sensor unavailable, bailing")
             return
 
+        nextStateValue = {}
+
         # check to see we're not locked out
         for each in self._veto_sensors: #["sensor.sunload_southside", "sensor.sunload_northside"]:
             _LOGGER.debug("checking veto_sensor %s", each)
-            if self._hass.states.is_state(each, "True"):
+            if self._hass.states.is_state(each, "on"):
                 _LOGGER.info("headcount sensor disabled by %s, bailing", (each))
+                nextStateValue["state"] = "vetoed"
+                self.saveState(nextStateValue)
                 return
 
         # get the values we need
@@ -264,7 +268,7 @@ class luxLightInstance(Entity):
             _LOGGER.warning("luxlights exception %s", e)
             return
 
-        nextStateValue = {}
+        # nextStateValue = {}
 
         if home == "on":
             nextStateValue["state"] = "present"
